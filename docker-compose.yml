@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gymsanity
+      POSTGRES_PASSWORD: gymsanity
+      POSTGRES_DB: gymsanity
+    ports:
+      - "5432:5432"
+    volumes:
+      - gymsanity_pg:/var/lib/postgresql/data
+
+volumes:
+  gymsanity_pg:

@@ -1,0 +1,296 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  MEMBER
+  COACH
+}
+
+enum SlotType {
+  GROUP
+  ONE_ON_ONE
+}
+
+enum BookingStatus {
+  BOOKED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum PlanBillingType {
+  SUBSCRIPTION
+  ONE_TIME
+}
+
+enum ExerciseLineSection {
+  MOVEMENT_PREP
+  STRENGTH
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         UserRole @default(MEMBER)
+  createdAt    DateTime @default(now())
+  /// Set after first successful Stripe Checkout (Customer id)
+  stripeCustomerId String? @unique @map("stripe_customer_id")
+  /// Consecutive UTC days with ≥1 completed program session (accountability streak).
+  loyaltyStreak   Int     @default(0) @map("loyalty_streak")
+  /// Last UTC calendar day (YYYY-MM-DD) that advanced the streak.
+  lastStreakDay   String? @map("last_streak_day")
+
+  memberships    Membership[]
+  bookings       Booking[]
+  completions    WorkoutCompletion[]
+  exerciseSetLogs ExerciseSetLog[]
+  exerciseLoadHistories ExerciseLoadHistory[]
+  creditBalances CreditBalance[]
+  creditEntries  CreditLedger[]
+  sleepJournalEntries SleepJournalEntry[]
+  /// Programs published only for this member (coach-tailored).
+  tailoredPrograms Program[] @relation("ProgramAssignedMember")
+  /// Set when the member finishes the in-app onboarding questionnaire.
+  onboardingCompletedAt DateTime? @map("onboarding_completed_at")
+  /// Structured answers: fitness, goals, habits, health (see lib/onboarding-schema.ts).
+  onboardingProfile     Json?     @map("onboarding_profile")
+  /// Optional coach-written nutrition addendum (shown with goal-based playbooks).
+  memberNutritionPlan   MemberNutritionPlan?
+}
+
+/// Per-member nutrition notes from coach; goal-based playbooks are derived from onboarding separately.
+model MemberNutritionPlan {
+  id         String   @id @default(cuid())
+  userId     String   @unique @map("user_id")
+  coachNotes String   @default("") @db.Text @map("coach_notes")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Plan {
+  id                       String   @id @default(cuid())
+  slug                     String   @unique
+  name                     String
+  description              String
+  includesDigitalPrograms  Boolean  @default(true)
+  allowsGroupBooking       Boolean  @default(true)
+  allowsOneOnOneBooking    Boolean  @default(false)
+  /// For ONE_TIME packs: sessions credited at checkout. For SUBSCRIPTION: monthly 1:1 credits (legacy).
+  oneOnOneCreditsPerMonth  Int      @default(0)
+  sortOrder                Int      @default(0)
+  billingType              PlanBillingType @default(SUBSCRIPTION) @map("billing_type")
+  /// Stripe Price id (one-time or recurring, must match billingType)
+  stripePriceId            String?  @unique @map("stripe_price_id")
+
+  memberships Membership[]
+}
+
+model Membership {
+  id        String    @id @default(cuid())
+  userId    String
+  planId    String
+  active    Boolean   @default(true)
+  startedAt DateTime  @default(now())
+  endsAt    DateTime?
+  stripeSubscriptionId String? @unique @map("stripe_subscription_id")
+  /// Set after a completed one-time Checkout (webhook idempotency).
+  completedCheckoutSessionId String? @unique @map("completed_checkout_session_id")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Program {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  weeks       Int      @default(4)
+  published   Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  /// When set, only this member sees the program in the app (library programs use null).
+  assignedMemberId String? @map("assigned_member_id")
+  assignedMember   User?   @relation("ProgramAssignedMember", fields: [assignedMemberId], references: [id], onDelete: SetNull)
+
+  days ProgramDay[]
+
+  @@index([assignedMemberId])
+}
+
+/// Reusable movement in the coach library (programs reference these).
+model Exercise {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  category    String   @default("strength")
+  /// Primary muscle / region for coach library filtering (see lib/muscle-groups.ts).
+  muscleGroup String   @default("full_body") @map("muscle_group")
+  equipment   String?
+  cues        String   @default("")
+  videoUrl    String?
+  published   Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  exerciseLines ExerciseLine[]
+}
+
+model ProgramDay {
+  id         String @id @default(cuid())
+  programId  String
+  weekNumber Int
+  dayIndex   Int
+  title      String
+  focusNote  String?
+
+  program     Program             @relation(fields: [programId], references: [id], onDelete: Cascade)
+  exercises   ExerciseLine[]
+  completions WorkoutCompletion[]
+
+  @@index([programId])
+}
+
+model ExerciseLine {
+  id             String  @id @default(cuid())
+  programDayId   String
+  sortOrder      Int
+  /// Denormalized label (often matches Exercise.name; editable per program).
+  name           String
+  prescription   String
+  exerciseId     String?
+  exercise       Exercise? @relation(fields: [exerciseId], references: [id], onDelete: SetNull)
+  section        ExerciseLineSection @default(STRENGTH) @map("section")
+  /// How many sets the member can check off (1–20).
+  setCount       Int                 @default(3) @map("set_count")
+
+  programDay ProgramDay @relation(fields: [programDayId], references: [id], onDelete: Cascade)
+  setLogs              ExerciseSetLog[]
+  exerciseLoadHistories ExerciseLoadHistory[]
+
+  @@index([programDayId])
+  @@index([exerciseId])
+}
+
+/// Member checked off a set for an exercise line in a session.
+model ExerciseSetLog {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  exerciseLineId String   @map("exercise_line_id")
+  setIndex       Int      @map("set_index")
+  completedAt    DateTime @default(now()) @map("completed_at")
+  /// Last logged load for this set (kg). Optional—bodyweight / conditioning may omit.
+  weightKg       Float?   @map("weight_kg")
+  reps           Int?
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exerciseLine ExerciseLine @relation(fields: [exerciseLineId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, exerciseLineId, setIndex])
+  @@index([userId])
+  @@index([exerciseLineId])
+}
+
+/// Append-only log when a member saves weight and/or reps for a completed set (progression over time).
+model ExerciseLoadHistory {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  exerciseLineId String   @map("exercise_line_id")
+  setIndex       Int      @map("set_index")
+  weightKg       Float?   @map("weight_kg")
+  reps           Int?
+  loggedAt       DateTime @default(now()) @map("logged_at")
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exerciseLine ExerciseLine @relation(fields: [exerciseLineId], references: [id], onDelete: Cascade)
+
+  @@index([userId, loggedAt])
+  @@index([exerciseLineId])
+}
+
+/// One row per calendar day per member (local date as YYYY-MM-DD).
+model SleepJournalEntry {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  entryDate      String   @map("entry_date")
+  hoursAsleep    Float    @map("hours_asleep")
+  bedtimeRoutine String   @db.Text @map("bedtime_routine")
+  dreamsRecalled String   @default("") @db.Text @map("dreams_recalled")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, entryDate])
+  @@index([userId])
+}
+
+model WorkoutCompletion {
+  id           String   @id @default(cuid())
+  userId       String
+  programDayId String
+  completedAt  DateTime @default(now())
+  note         String?
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  programDay ProgramDay @relation(fields: [programDayId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, programDayId])
+  @@index([userId])
+}
+
+model Slot {
+  id        String   @id @default(cuid())
+  startAt   DateTime
+  endAt     DateTime
+  type      SlotType
+  title     String?
+  capacity  Int      @default(1)
+  location  String?
+
+  bookings Booking[]
+}
+
+model Booking {
+  id            String        @id @default(cuid())
+  userId        String
+  slotId        String
+  status        BookingStatus @default(BOOKED)
+  creditCharged Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slot Slot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([slotId])
+}
+
+/// Running balance for 1:1 credits (simple ledger companion)
+model CreditBalance {
+  userId  String @id
+  balance Int    @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CreditLedger {
+  id        String   @id @default(cuid())
+  userId    String
+  delta     Int
+  reason    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
