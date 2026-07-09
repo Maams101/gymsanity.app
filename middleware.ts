@@ -3,7 +3,11 @@ import type { NextRequest } from "next/server";
 import { COOKIE, verifySession } from "@/lib/auth";
 
 const memberPaths = [
+  "/today",
   "/dashboard",
+  "/day",
+  "/recovery",
+  "/settings",
   "/programs",
   "/progress",
   "/book",
@@ -39,7 +43,13 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isCoachArea && session && session.role !== "COACH") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL("/today", request.url));
+  }
+
+  if (pathname === "/dashboard" || pathname === "/day") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/today";
+    return NextResponse.redirect(url);
   }
 
   return NextResponse.next();
@@ -47,7 +57,15 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/today",
+    "/today/:path*",
     "/dashboard/:path*",
+    "/day",
+    "/day/:path*",
+    "/recovery",
+    "/recovery/:path*",
+    "/settings",
+    "/settings/:path*",
     "/programs/:path*",
     "/progress",
     "/progress/:path*",

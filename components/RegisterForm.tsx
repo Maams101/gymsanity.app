@@ -10,10 +10,10 @@ type Plan = {
   description: string;
 };
 
-/** After signup, members go to goals onboarding first unless `?next=` overrides (e.g. next=/dashboard). */
-function postRegisterPath(searchParams: URLSearchParams): "/onboarding" | "/dashboard" {
+/** After signup, members go to goals onboarding first unless `?next=` overrides (e.g. next=/today). */
+function postRegisterPath(searchParams: URLSearchParams): "/onboarding" | "/today" {
   const raw = searchParams.get("next");
-  if (raw === "/dashboard") return "/dashboard";
+  if (raw === "/today" || raw === "/dashboard") return "/today";
   return "/onboarding";
 }
 

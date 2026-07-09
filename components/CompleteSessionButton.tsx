@@ -1,5 +1,6 @@
 "use client";
 
+import { clearActiveSession } from "@/components/nav/SessionResumeHint";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -45,6 +46,7 @@ export function CompleteSessionButton({ programDayId, initialNote, initiallyComp
       }
     }
     setComplete(true);
+    clearActiveSession();
     router.refresh();
   }
 

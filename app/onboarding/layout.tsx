@@ -17,7 +17,7 @@ export default async function OnboardingLayout({ children }: { children: React.R
   if (user.onboardingCompletedAt) {
     const active = await getActiveMembership(session.sub);
     if (!active) redirect("/subscribe");
-    redirect("/dashboard");
+    redirect("/today");
   }
 
   return (

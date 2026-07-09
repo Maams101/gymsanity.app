@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { appBaseUrl } from "@/lib/app-url";
 import { DM_Sans, Fraunces } from "next/font/google";
 import "./globals.css";
@@ -17,6 +17,19 @@ export const metadata: Metadata = {
   metadataBase: new URL(appBaseUrl()),
   title: "Gymsanity — Train for sanity",
   description: "Fitness that honors mental, emotional, and spiritual balance.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Gymsanity",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#6d28d9",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

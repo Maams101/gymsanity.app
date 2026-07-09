@@ -61,7 +61,7 @@ export function MemberNavDropdowns({ preview }: Props) {
   function triggerClass(key: MenuKey) {
     const isOpen = open === key;
     const pathOn =
-      (key === "home" && pathname === "/dashboard") ||
+      (key === "home" && (pathname === "/dashboard" || pathname === "/day")) ||
       (key === "programs" && activePath("/programs")) ||
       (key === "progress" && activePath("/progress")) ||
       (key === "sleep" && activePath("/sleep")) ||
@@ -97,6 +97,18 @@ export function MemberNavDropdowns({ preview }: Props) {
             <p className="mt-2 text-sm leading-relaxed text-gymsanity-800/90">
               Membership, accountability streak, and your next session—everything on the dashboard.
             </p>
+            <Link
+              href="/day"
+              className="mt-3 flex flex-col rounded-xl border border-gymsanity-200 bg-gymsanity-50/80 p-3 hover:bg-gymsanity-50"
+              onClick={() => setOpen(null)}
+            >
+              <span className="text-xs font-semibold uppercase tracking-wide text-gymsanity-700">
+                Day at a glance
+              </span>
+              <span className="mt-1 text-sm text-gymsanity-800">
+                Today&apos;s training, macros, and recovery focus
+              </span>
+            </Link>
             {preview.planName && (
               <p className="mt-3 text-sm text-gymsanity-900">
                 <span className="text-gymsanity-700">Plan:</span>{" "}

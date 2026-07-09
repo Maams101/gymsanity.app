@@ -34,6 +34,22 @@ enum ExerciseLineSection {
   STRENGTH
 }
 
+enum FitnessProvider {
+  APPLE_HEALTH
+  GOOGLE_FIT
+  FITBIT
+  GARMIN
+  WHOOP
+  OURA
+  STRAVA
+}
+
+enum FitnessConnectionStatus {
+  PENDING
+  CONNECTED
+  DISCONNECTED
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -64,6 +80,9 @@ model User {
   onboardingProfile     Json?     @map("onboarding_profile")
   /// Optional coach-written nutrition addendum (shown with goal-based playbooks).
   memberNutritionPlan   MemberNutritionPlan?
+  coachWorkoutsOfDay    CoachWorkoutOfDay[]
+  workoutOfDayAttempts  WorkoutOfDayAttempt[]
+  fitnessConnections    FitnessConnection[]
 }
 
 /// Per-member nutrition notes from coach; goal-based playbooks are derived from onboarding separately.
@@ -245,6 +264,64 @@ model WorkoutCompletion {
   programDay ProgramDay @relation(fields: [programDayId], references: [id], onDelete: Cascade)
 
   @@unique([userId, programDayId])
+  @@index([userId])
+}
+
+/// Coach-published workout for a calendar day (YYYY-MM-DD). One active WOD per day.
+model CoachWorkoutOfDay {
+  id          String   @id @default(cuid())
+  dayKey      String   @unique @map("day_key")
+  title       String
+  description String   @default("") @db.Text
+  /// [{ name, prescription, setCount }]
+  blocks      Json
+  published   Boolean  @default(true)
+  coachUserId String   @map("coach_user_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  coach    User                  @relation(fields: [coachUserId], references: [id], onDelete: Cascade)
+  attempts WorkoutOfDayAttempt[]
+
+  @@index([coachUserId])
+}
+
+/// Member accepted / completed the coach WOD for that day.
+model WorkoutOfDayAttempt {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  wodId       String   @map("wod_id")
+  completedAt DateTime @default(now()) @map("completed_at")
+  note        String?
+
+  user User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wod  CoachWorkoutOfDay @relation(fields: [wodId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, wodId])
+  @@index([userId])
+  @@index([wodId])
+}
+
+/// Member-linked wearable / health platform (Apple Health, Fitbit, etc.).
+model FitnessConnection {
+  id             String                  @id @default(cuid())
+  userId         String                  @map("user_id")
+  provider       FitnessProvider
+  status         FitnessConnectionStatus @default(PENDING)
+  externalUserId String?                 @map("external_user_id")
+  /// Encrypted in production; demo stores opaque token reference only.
+  accessToken    String?                 @map("access_token") @db.Text
+  refreshToken   String?                 @map("refresh_token") @db.Text
+  tokenExpiresAt DateTime?               @map("token_expires_at")
+  lastSyncAt     DateTime?               @map("last_sync_at")
+  /// Latest synced snapshot: steps, sleepHours, restingHr, etc.
+  lastSnapshot   Json?                   @map("last_snapshot")
+  createdAt      DateTime                @default(now()) @map("created_at")
+  updatedAt      DateTime                @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
   @@index([userId])
 }
 

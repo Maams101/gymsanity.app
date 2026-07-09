@@ -20,7 +20,7 @@ export function CheckoutPoller() {
       if (!res.ok) return;
       const data = await res.json().catch(() => ({}));
       if (data.membership) {
-        router.push("/dashboard?checkout=success");
+        router.push("/today?checkout=success");
         router.refresh();
         return;
       }

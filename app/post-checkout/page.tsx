@@ -9,7 +9,7 @@ export default async function PostCheckoutPage() {
 
   const active = await getActiveMembership(session.sub);
   if (active) {
-    redirect("/dashboard?checkout=success");
+    redirect("/today?checkout=success");
   }
 
   return <CheckoutPoller />;

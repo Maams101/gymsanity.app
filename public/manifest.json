@@ -1,0 +1,18 @@
+{
+  "name": "Gymsanity",
+  "short_name": "Gymsanity",
+  "description": "Train for sanity — programming, recovery, and coaching in one place.",
+  "start_url": "/today",
+  "display": "standalone",
+  "background_color": "#faf8ff",
+  "theme_color": "#6d28d9",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

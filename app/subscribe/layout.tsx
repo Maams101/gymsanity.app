@@ -17,7 +17,7 @@ export default async function SubscribeLayout({ children }: { children: React.Re
   if (!user.onboardingCompletedAt) redirect("/onboarding");
 
   const active = await getActiveMembership(session.sub);
-  if (active) redirect("/dashboard");
+  if (active) redirect("/today");
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-gymsanity-50 via-white to-violet-50/40">

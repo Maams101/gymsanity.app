@@ -5,6 +5,7 @@ import { getSession } from "@/lib/get-session";
 import { getActiveMembership } from "@/lib/membership";
 import { prismaWherePublishedProgramForMember } from "@/lib/program-visibility";
 import { CompleteSessionButton } from "@/components/CompleteSessionButton";
+import { SessionActiveMarker } from "@/components/nav/SessionActiveMarker";
 import { WorkoutSessionTracker } from "@/components/WorkoutSessionTracker";
 import { defaultLoadWeightUnitFromOnboarding } from "@/lib/load-weight-display";
 
@@ -64,6 +65,7 @@ export default async function SessionPage({ params }: Props) {
 
   return (
     <div className="space-y-8">
+      <SessionActiveMarker dayId={day.id} title={day.title} />
       <div>
         <Link
           href={`/programs/${day.program.id}`}
@@ -78,8 +80,8 @@ export default async function SessionPage({ params }: Props) {
       <div className="rounded-2xl border border-gymsanity-100 bg-white/90 p-6 shadow-sm">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-gymsanity-700">Session</h2>
         <p className="mt-2 text-sm text-gymsanity-900/75">
-          Tap each set when you finish it. For strength work, choose kg or lbs and log weight plus reps per
-          set—entries show on your{" "}
+          Count reps with the +/− counter, then tap Complete set—a recovery countdown starts automatically
+          between sets. For strength work, log weight in kg or lbs; entries show on your{" "}
           <Link href="/progress" className="font-semibold text-gymsanity-900 underline hover:text-gymsanity-950">
             Load progression
           </Link>{" "}

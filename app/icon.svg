@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Gymsanity">
+  <rect width="512" height="512" rx="112" fill="#6d28d9"/>
+  <path fill="#faf8ff" d="M128 352V160h48v80c0 44 28 72 80 72s80-28 80-72v-80h48v192h-44v-36c-20 24-52 40-92 40s-72-16-92-40v36H128z"/>
+</svg>

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { formatBiomarkerSummaryLine } from "@/lib/biomarker-format";
+import { OnboardingCameraAssessment } from "@/components/OnboardingCameraAssessment";
 import {
   onboardingBiomarkerFieldLabels,
   onboardingLabels,
@@ -40,7 +41,7 @@ const initial: OnboardingProfile = {
   clearedByPhysician: "not_sure",
 };
 
-const STEPS = 6;
+const STEPS = 7;
 
 function toggle<T extends string>(arr: T[], value: T): T[] {
   return arr.includes(value) ? arr.filter((x) => x !== value) : [...arr, value];
@@ -108,15 +109,19 @@ export function OnboardingWizard() {
         if (data.ageYears < 16 || data.ageYears > 100) return "Age should be between 16 and 100.";
         return null;
       case 1:
-        if (data.equipmentAccess.length === 0) return "Choose at least one training environment or equipment option.";
+        if (!data.sexForMetrics) return "Select an option for BMR and body-composition estimates.";
+        if (!data.cameraAssessment) return "Complete the camera movement scan (or use Re-scan if it failed).";
         return null;
       case 2:
-        if (data.primaryGoals.length === 0) return "Select at least one goal.";
+        if (data.equipmentAccess.length === 0) return "Choose at least one training environment or equipment option.";
         return null;
       case 3:
-        if (data.recoveryPractices.length === 0) return "Select at least one recovery or rest practice (or “None right now”).";
+        if (data.primaryGoals.length === 0) return "Select at least one goal.";
         return null;
       case 4:
+        if (data.recoveryPractices.length === 0) return "Select at least one recovery or rest practice (or “None right now”).";
+        return null;
+      case 5:
         return null;
       default:
         return null;
@@ -424,7 +429,21 @@ export function OnboardingWizard() {
         </section>
       )}
 
-      {step === 1 && (
+      {step === 1 &&
+        data.heightCm != null &&
+        data.weightKg != null &&
+        data.ageYears != null && (
+          <OnboardingCameraAssessment
+            heightCm={data.heightCm}
+            weightKg={data.weightKg}
+            ageYears={data.ageYears}
+            sexForMetrics={data.sexForMetrics}
+            cameraAssessment={data.cameraAssessment}
+            onPatch={(patch) => setData((d) => ({ ...d, ...patch }))}
+          />
+        )}
+
+      {step === 2 && (
         <section className="space-y-6">
           <div>
             <h2 className="font-display text-xl font-semibold text-gymsanity-950">Training background</h2>
@@ -496,7 +515,7 @@ export function OnboardingWizard() {
         </section>
       )}
 
-      {step === 2 && (
+      {step === 3 && (
         <section className="space-y-6">
           <div>
             <h2 className="font-display text-xl font-semibold text-gymsanity-950">Goals</h2>
@@ -557,7 +576,7 @@ export function OnboardingWizard() {
         </section>
       )}
 
-      {step === 3 && (
+      {step === 4 && (
         <section className="space-y-6">
           <div>
             <h2 className="font-display text-xl font-semibold text-gymsanity-950">Habits & recovery</h2>
@@ -625,7 +644,7 @@ export function OnboardingWizard() {
         </section>
       )}
 
-      {step === 4 && (
+      {step === 5 && (
         <section className="space-y-6">
           <div>
             <h2 className="font-display text-xl font-semibold text-gymsanity-950">Health & safety</h2>
@@ -682,7 +701,7 @@ export function OnboardingWizard() {
         </section>
       )}
 
-      {step === 5 && (
+      {step === 6 && (
         <section className="space-y-4 text-sm text-gymsanity-900">
           <h2 className="font-display text-xl font-semibold text-gymsanity-950">Review</h2>
           <p className="text-gymsanity-800/85">
@@ -693,6 +712,23 @@ export function OnboardingWizard() {
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wide text-gymsanity-600">Biological markers</dt>
                 <dd>{formatBiomarkerSummaryLine(data)}</dd>
+              </div>
+            ) : null}
+            {data.cameraAssessment ? (
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-gymsanity-600">
+                  Metabolic & movement (camera)
+                </dt>
+                <dd>
+                  BMR ~{data.cameraAssessment.bmrKcal} kcal/day · body fat ~{data.cameraAssessment.bodyFatPercentEstimate}
+                  %
+                  {data.cameraAssessment.leanMassKg != null &&
+                  data.cameraAssessment.skeletalMuscleMassEstimateKg != null
+                    ? ` · lean ~${data.cameraAssessment.leanMassKg} kg · muscle ~${data.cameraAssessment.skeletalMuscleMassEstimateKg} kg (est.)`
+                    : ""}{" "}
+                  · shoulder {data.cameraAssessment.mobility.shoulderMobility} · hips / squat{" "}
+                  {data.cameraAssessment.mobility.hipMobility} · overall {data.cameraAssessment.mobility.overallMobility}
+                </dd>
               </div>
             ) : null}
             <div>

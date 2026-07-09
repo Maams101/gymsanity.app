@@ -98,7 +98,7 @@ Use this when the app is on **Vercel** and you already own **gymsanity.fit** at 
 1. Vercel **Domains**: add `gymsanity.fit` (and optional `www`) until status is **Valid** with HTTPS.
 2. Vercel env: `NEXT_PUBLIC_APP_URL=https://gymsanity.fit` — then **Redeploy**.
 3. Stripe **Webhook** (live mode): `https://gymsanity.fit/api/stripe/webhook` + update `STRIPE_WEBHOOK_SECRET` on Vercel.
-4. Stripe **Customer portal** return URLs: include `https://gymsanity.fit/dashboard` (and `/post-checkout` if you use it).
+4. Stripe **Customer portal** return URLs: include `https://gymsanity.fit/today` (and `/post-checkout` if you use it).
 
 ### 6.1 Add the domain in Vercel
 
@@ -137,7 +137,7 @@ Redeploy the project (or **Deployments** → **⋯** → **Redeploy**) so the ne
    (replace any old `localhost` or `*.vercel.app` test URL for live mode.)
 2. Copy the new **Signing secret** into **`STRIPE_WEBHOOK_SECRET`** on Vercel.
 3. **Customer portal** (if you use it): Stripe Dashboard → **Settings** → **Billing** → **Customer portal** — ensure allowed return URLs include  
-   `https://gymsanity.fit/dashboard` (and `/www` variant if you use www).
+   `https://gymsanity.fit/today` (and `/www` variant if you use www).
 
 ### 6.5 Optional: apex vs www
 

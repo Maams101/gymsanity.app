@@ -15,6 +15,26 @@ export function MemberOnboardingSummary({ profile }: { profile: unknown }) {
           <dd>{formatBiomarkerSummaryLine(d)}</dd>
         </div>
       ) : null}
+      {d.cameraAssessment ? (
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wide text-gymsanity-600">
+            Metabolic & movement (camera)
+          </dt>
+          <dd>
+            BMR ~{d.cameraAssessment.bmrKcal} kcal/day · est. BF {d.cameraAssessment.bodyFatPercentEstimate}%
+            {d.cameraAssessment.leanMassKg != null &&
+            d.cameraAssessment.skeletalMuscleMassEstimateKg != null ? (
+              <>
+                {" "}
+                · lean ~{d.cameraAssessment.leanMassKg} kg · est. muscle ~{d.cameraAssessment.skeletalMuscleMassEstimateKg}{" "}
+                kg
+              </>
+            ) : null}{" "}
+            · shoulder {d.cameraAssessment.mobility.shoulderMobility} · squat / hip{" "}
+            {d.cameraAssessment.mobility.hipMobility} · overall {d.cameraAssessment.mobility.overallMobility}
+          </dd>
+        </div>
+      ) : null}
       <div>
         <dt className="text-xs font-semibold uppercase tracking-wide text-gymsanity-600">Training</dt>
         <dd>

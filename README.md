@@ -37,7 +37,9 @@ The default `.env.example` uses `postgresql://gymsanity:gymsanity@localhost:5432
 
 ### Production: host + DB + Stripe + domain
 
-Step-by-step (**Neon, Vercel, Stripe, connecting gymsanity.fit**) is in [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) — see **§6 Custom domain**.
+**Fast path to gymsanity.fit:** [docs/WEBSITE_LAUNCH.md](./docs/WEBSITE_LAUNCH.md)
+
+Full reference (**Neon, Vercel, Stripe, DNS**): [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) — see **§6 Custom domain**.
 
 ### Demo accounts (after seed)
 

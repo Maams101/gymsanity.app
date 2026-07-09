@@ -2,9 +2,15 @@ import { BookingStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { CoachCreateSlotForm } from "@/components/CoachCreateSlotForm";
 import { CoachBookingActions } from "@/components/CoachBookingActions";
+import { CoachWorkoutOfDayForm } from "@/components/coach/CoachWorkoutOfDayForm";
+import { getCoachWorkoutOfDayForEdit } from "@/lib/workout-of-day";
+import { localDateKey } from "@/lib/local-date";
 
 export default async function CoachPage() {
   const now = new Date();
+  const todayKey = localDateKey(now);
+  const todayWod = await getCoachWorkoutOfDayForEdit(todayKey);
+
   const bookings = await prisma.booking.findMany({
     where: {
       status: BookingStatus.BOOKED,
@@ -20,12 +26,26 @@ export default async function CoachPage() {
   return (
     <div className="space-y-10">
       <div>
-        <h1 className="font-display text-3xl font-semibold text-gymsanity-950">Coach desk</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gymsanity-700">Desk</p>
+        <h1 className="mt-1 font-display text-3xl font-semibold text-gymsanity-950">Coach desk</h1>
         <p className="mt-2 max-w-xl text-gymsanity-900/75">
-          Upcoming reservations and new availability. Mark outcomes after sessions to keep records
-          clean.
+          Daily workout, bookings, and availability—organized like a coaching command center.
         </p>
       </div>
+
+      <CoachWorkoutOfDayForm
+        initialDayKey={todayKey}
+        initialWod={
+          todayWod
+            ? {
+                title: todayWod.title,
+                description: todayWod.description,
+                blocks: todayWod.blocks,
+                published: todayWod.published,
+              }
+            : null
+        }
+      />
 
       <CoachCreateSlotForm />
 

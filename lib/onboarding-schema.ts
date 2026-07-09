@@ -1,5 +1,31 @@
 import { z } from "zod";
 
+export const mobilityBandSchema = z.enum(["limited", "typical", "good"]);
+
+/** Saved after the camera + pose step (BMR/BF from validated formulas; mobility from pose angles). */
+export const cameraAssessmentSchema = z.object({
+  completedAt: z.string(),
+  disclaimersAccepted: z.literal(true),
+  bmrKcal: z.number().min(600).max(6000),
+  bodyFatPercentEstimate: z.number().min(4).max(60),
+  bodyFatMethod: z.literal("deurenberg_bmi"),
+  /** From weight + estimated BF%; not appendicular DXA. Optional for legacy saved assessments. */
+  leanMassKg: z.number().min(12).max(140).optional(),
+  /** Partition of lean mass by sex (population-style heuristic). */
+  skeletalMuscleMassEstimateKg: z.number().min(6).max(95).optional(),
+  muscleMassMethod: z.literal("lbm_sex_partition").optional(),
+  mobility: z.object({
+    shoulderOpeningMaxDeg: z.number(),
+    squatMinKneeDeg: z.number(),
+    shoulderMobility: mobilityBandSchema,
+    hipMobility: mobilityBandSchema,
+    overallMobility: mobilityBandSchema,
+  }),
+  poseConfidence: z.enum(["low", "medium", "high"]).optional(),
+});
+
+export type CameraAssessment = z.infer<typeof cameraAssessmentSchema>;
+
 /** Persisted member onboarding answers (fitness, goals, habits, health). */
 export const onboardingProfileSchema = z.object({
   /// Biological markers (metric); optional for legacy profiles; wizard requires for new completions.
@@ -40,7 +66,14 @@ export const onboardingProfileSchema = z.object({
   medicationsSupplements: z.string().max(2000).optional(),
   injuryLimitations: z.string().max(2000).optional(),
   clearedByPhysician: z.enum(["yes", "no", "not_sure"]),
-});
+  /** Used with height/weight/age for BMR and Deurenberg body-fat estimate. */
+  sexForMetrics: z.enum(["male", "female", "prefer_not"]).optional(),
+  cameraAssessment: cameraAssessmentSchema.optional(),
+})
+  .refine((d) => !d.cameraAssessment || d.sexForMetrics != null, {
+    message: "sexForMetrics required when cameraAssessment is set",
+    path: ["sexForMetrics"],
+  });
 
 export type OnboardingProfile = z.infer<typeof onboardingProfileSchema>;
 

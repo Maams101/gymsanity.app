@@ -15,6 +15,11 @@
     "db:setup": "bash scripts/setup-local-db.sh"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/cli": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
+    "@capacitor/ios": "^8.4.1",
+    "@mediapipe/tasks-vision": "^0.10.21",
     "@prisma/client": "^6.5.0",
     "@stripe/stripe-js": "^9.0.0",
     "bcryptjs": "^2.4.3",
