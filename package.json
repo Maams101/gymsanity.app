@@ -12,7 +12,10 @@
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "db:up": "docker compose up -d",
-    "db:setup": "bash scripts/setup-local-db.sh"
+    "db:setup": "bash scripts/setup-local-db.sh",
+    "cap:sync": "npx cap sync",
+    "cap:open:ios": "npx cap open ios",
+    "cap:open:android": "npx cap open android"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",

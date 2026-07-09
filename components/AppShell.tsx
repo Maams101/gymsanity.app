@@ -19,7 +19,7 @@ export function AppShell({ session, children, variant = "member", memberNavPrevi
   const homeHref = isCoachShell ? "/coach" : "/today";
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-6xl gap-0 px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-6 md:gap-8 md:px-6 md:pb-12 md:pt-8 lg:px-8">
+    <div className="mx-auto flex min-h-screen max-w-6xl gap-0 px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-[calc(1.5rem+env(safe-area-inset-top))] md:gap-8 md:px-6 md:pb-12 md:pt-8 lg:px-8">
       <aside className="hidden w-52 shrink-0 md:block lg:w-56">
         <div className="sticky top-8 space-y-8">
           <div>

@@ -13,4 +13,5 @@ body {
     radial-gradient(900px 500px at 100% 0%, rgba(196, 181, 253, 0.2), transparent),
     var(--background);
   min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
 }

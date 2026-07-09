@@ -79,6 +79,28 @@ export default async function SettingsPage() {
           for app-like access, faster launch, and session timers that stay front and center.
         </p>
       </section>
+
+      <section className="rounded-2xl border border-gymsanity-100 bg-white/90 p-6 shadow-sm">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-gymsanity-700">Legal</h2>
+        <ul className="mt-4 flex flex-wrap gap-2 text-sm">
+          <li>
+            <Link
+              href="/privacy"
+              className="inline-block rounded-full border border-gymsanity-200 px-4 py-2 font-semibold text-gymsanity-900 hover:bg-gymsanity-50"
+            >
+              Privacy Policy
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/terms"
+              className="inline-block rounded-full border border-gymsanity-200 px-4 py-2 font-semibold text-gymsanity-900 hover:bg-gymsanity-50"
+            >
+              Terms of Service
+            </Link>
+          </li>
+        </ul>
+      </section>
     </div>
   );
 }

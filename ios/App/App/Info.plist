@@ -47,5 +47,7 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Gymsanity uses the camera for optional onboarding movement assessment. Video stays on your device unless you choose to share results with your coach.</string>
 </dict>
 </plist>

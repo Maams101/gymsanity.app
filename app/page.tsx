@@ -92,6 +92,15 @@ export default function HomePage() {
         <p className="text-sm text-gymsanity-800/70">
           Founded by Aliou Barry — built on resilience and consistency.
         </p>
+
+        <footer className="flex flex-wrap gap-4 border-t border-gymsanity-100/80 pt-6 text-sm text-gymsanity-800/70">
+          <Link href="/privacy" className="hover:text-gymsanity-950">
+            Privacy
+          </Link>
+          <Link href="/terms" className="hover:text-gymsanity-950">
+            Terms
+          </Link>
+        </footer>
       </main>
     </div>
   );
