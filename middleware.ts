@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { COOKIE, verifySession } from "@/lib/auth";
+import { COOKIE, verifySession } from "./lib/auth";
 
 const memberPaths = [
   "/today",

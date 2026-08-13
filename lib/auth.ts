@@ -1,5 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
-import type { UserRole } from "@prisma/client";
+
+/** Keep middleware Edge-safe: do not import @prisma/client here. */
+export type SessionRole = "COACH" | "MEMBER";
 
 const COOKIE = "gymsanity_session";
 const alg = "HS256";
@@ -13,7 +15,7 @@ function getSecret() {
 export type SessionPayload = {
   sub: string;
   email: string;
-  role: UserRole;
+  role: SessionRole;
 };
 
 export async function signSession(payload: SessionPayload, maxAgeSec = 60 * 60 * 24 * 14) {
@@ -30,8 +32,8 @@ export async function verifySession(token: string): Promise<SessionPayload | nul
     const { payload } = await jwtVerify(token, getSecret(), { algorithms: [alg] });
     const sub = payload.sub;
     const email = payload.email as string | undefined;
-    const role = payload.role as UserRole | undefined;
-    if (!sub || !email || !role) return null;
+    const role = payload.role as SessionRole | undefined;
+    if (!sub || !email || (role !== "COACH" && role !== "MEMBER")) return null;
     return { sub, email, role };
   } catch {
     return null;
