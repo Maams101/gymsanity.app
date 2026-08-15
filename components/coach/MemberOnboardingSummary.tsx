@@ -1,4 +1,5 @@
 import { formatBiomarkerSummaryLine } from "@/lib/biomarker-format";
+import { MovementScreenResults } from "@/components/MovementScreenResults";
 import { onboardingLabels, onboardingProfileSchema } from "@/lib/onboarding-schema";
 
 export function MemberOnboardingSummary({ profile }: { profile: unknown }) {
@@ -17,21 +18,9 @@ export function MemberOnboardingSummary({ profile }: { profile: unknown }) {
       ) : null}
       {d.cameraAssessment ? (
         <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-gymsanity-600">
-            Metabolic & movement (camera)
-          </dt>
+          <dt className="text-xs font-semibold uppercase tracking-wide text-gymsanity-600">Movement screen</dt>
           <dd>
-            BMR ~{d.cameraAssessment.bmrKcal} kcal/day · est. BF {d.cameraAssessment.bodyFatPercentEstimate}%
-            {d.cameraAssessment.leanMassKg != null &&
-            d.cameraAssessment.skeletalMuscleMassEstimateKg != null ? (
-              <>
-                {" "}
-                · lean ~{d.cameraAssessment.leanMassKg} kg · est. muscle ~{d.cameraAssessment.skeletalMuscleMassEstimateKg}{" "}
-                kg
-              </>
-            ) : null}{" "}
-            · shoulder {d.cameraAssessment.mobility.shoulderMobility} · squat / hip{" "}
-            {d.cameraAssessment.mobility.hipMobility} · overall {d.cameraAssessment.mobility.overallMobility}
+            <MovementScreenResults assessment={d.cameraAssessment} />
           </dd>
         </div>
       ) : null}

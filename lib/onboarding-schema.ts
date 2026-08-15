@@ -1,17 +1,26 @@
 import { z } from "zod";
 
 export const mobilityBandSchema = z.enum(["limited", "typical", "good"]);
+export const screenScoreSchema = z.union([z.literal(1), z.literal(2), z.literal(3)]);
 
-/** Saved after the camera + pose step (BMR/BF from validated formulas; mobility from pose angles). */
+const movementPatternSchema = z.object({
+  id: z.enum(["deep_squat", "shoulder_mobility"]),
+  name: z.string(),
+  score: screenScoreSchema,
+  band: mobilityBandSchema,
+  whatWeSaw: z.string(),
+  coachingFocus: z.string(),
+});
+
+/** Saved after the camera movement screen (pose-based mobility only). */
 export const cameraAssessmentSchema = z.object({
   completedAt: z.string(),
   disclaimersAccepted: z.literal(true),
-  bmrKcal: z.number().min(600).max(6000),
-  bodyFatPercentEstimate: z.number().min(4).max(60),
-  bodyFatMethod: z.literal("deurenberg_bmi"),
-  /** From weight + estimated BF%; not appendicular DXA. Optional for legacy saved assessments. */
+  /** Legacy fields from older onboarding; not shown as scan results. */
+  bmrKcal: z.number().min(600).max(6000).optional(),
+  bodyFatPercentEstimate: z.number().min(4).max(60).optional(),
+  bodyFatMethod: z.literal("deurenberg_bmi").optional(),
   leanMassKg: z.number().min(12).max(140).optional(),
-  /** Partition of lean mass by sex (population-style heuristic). */
   skeletalMuscleMassEstimateKg: z.number().min(6).max(95).optional(),
   muscleMassMethod: z.literal("lbm_sex_partition").optional(),
   mobility: z.object({
@@ -21,6 +30,14 @@ export const cameraAssessmentSchema = z.object({
     hipMobility: mobilityBandSchema,
     overallMobility: mobilityBandSchema,
   }),
+  movementScreen: z
+    .object({
+      deepSquat: movementPatternSchema,
+      shoulderMobility: movementPatternSchema,
+      priority: z.enum(["deep_squat", "shoulder_mobility", "balanced"]),
+      summary: z.string(),
+    })
+    .optional(),
   poseConfidence: z.enum(["low", "medium", "high"]).optional(),
 });
 
@@ -66,14 +83,10 @@ export const onboardingProfileSchema = z.object({
   medicationsSupplements: z.string().max(2000).optional(),
   injuryLimitations: z.string().max(2000).optional(),
   clearedByPhysician: z.enum(["yes", "no", "not_sure"]),
-  /** Used with height/weight/age for BMR and Deurenberg body-fat estimate. */
+  /** Optional; used later for calorie estimates, not for the camera movement screen. */
   sexForMetrics: z.enum(["male", "female", "prefer_not"]).optional(),
   cameraAssessment: cameraAssessmentSchema.optional(),
-})
-  .refine((d) => !d.cameraAssessment || d.sexForMetrics != null, {
-    message: "sexForMetrics required when cameraAssessment is set",
-    path: ["sexForMetrics"],
-  });
+});
 
 export type OnboardingProfile = z.infer<typeof onboardingProfileSchema>;
 

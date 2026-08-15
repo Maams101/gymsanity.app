@@ -2,6 +2,7 @@ import type { NormalizedLandmark } from "@mediapipe/tasks-vision";
 
 /** BlazePose / MediaPipe pose landmark indices (33-point topology). */
 export const POSE = {
+  NOSE: 0,
   LEFT_SHOULDER: 11,
   RIGHT_SHOULDER: 12,
   LEFT_ELBOW: 13,
@@ -131,3 +132,108 @@ export function overallMobility(shoulder: MobilityBand, hip: MobilityBand): Mobi
   const m = Math.min(rank[shoulder], rank[hip]);
   return (Object.keys(rank) as MobilityBand[]).find((k) => rank[k] === m)!;
 }
+
+export type FramingHint = {
+  id: "visible" | "fullBody" | "centered" | "distance";
+  ok: boolean;
+  label: string;
+};
+
+export type FramingResult = {
+  ready: boolean;
+  hints: FramingHint[];
+};
+
+const EMPTY_FRAMING: FramingResult = {
+  ready: false,
+  hints: [
+    { id: "visible", ok: false, label: "Step into the camera so your whole body is seen" },
+    { id: "fullBody", ok: false, label: "Keep head near the top of the frame and both feet visible" },
+    { id: "centered", ok: false, label: "Stand in the center, facing the camera" },
+    { id: "distance", ok: false, label: "Stand 6–8 feet back so there is space around you" },
+  ],
+};
+
+/**
+ * Full-body scan framing: person centered, head-to-feet visible, not too close.
+ * Landmarks are MediaPipe normalized coordinates (x/y in 0–1).
+ */
+export function evaluateScanFraming(lm: NormalizedLandmark[] | undefined): FramingResult {
+  if (!lm?.length) return EMPTY_FRAMING;
+
+  const nose = lm[POSE.NOSE];
+  const lSh = lm[POSE.LEFT_SHOULDER];
+  const rSh = lm[POSE.RIGHT_SHOULDER];
+  const lHip = lm[POSE.LEFT_HIP];
+  const rHip = lm[POSE.RIGHT_HIP];
+  const lAnk = lm[POSE.LEFT_ANKLE];
+  const rAnk = lm[POSE.RIGHT_ANKLE];
+
+  const bodyVisible =
+    visible(lSh, 0.4) &&
+    visible(rSh, 0.4) &&
+    visible(lHip, 0.35) &&
+    visible(rHip, 0.35) &&
+    (visible(lAnk, 0.25) || visible(rAnk, 0.25));
+
+  const headY = visible(nose, 0.3) ? nose.y : Math.min(lSh?.y ?? 1, rSh?.y ?? 1);
+  const footY = Math.max(
+    visible(lAnk, 0.2) ? lAnk.y : 0,
+    visible(rAnk, 0.2) ? rAnk.y : 0,
+  );
+  const span = footY - headY;
+  const fullBody = bodyVisible && headY < 0.28 && footY > 0.72 && span > 0.48;
+
+  const midX = visible(lSh) && visible(rSh) ? (lSh.x + rSh.x) / 2 : NaN;
+  const centered = Number.isFinite(midX) && midX > 0.32 && midX < 0.68;
+
+  const shoulderW = visible(lSh) && visible(rSh) ? Math.abs(lSh.x - rSh.x) : NaN;
+  const distanceOk =
+    Number.isFinite(shoulderW) && shoulderW > 0.1 && shoulderW < 0.48 && span > 0.45 && span < 0.92;
+
+  const hints: FramingHint[] = [
+    {
+      id: "visible",
+      ok: bodyVisible,
+      label: bodyVisible
+        ? "Whole body is in view"
+        : "Step into the camera so your whole body is seen",
+    },
+    {
+      id: "fullBody",
+      ok: fullBody,
+      label: fullBody
+        ? "Head to feet fit in the frame"
+        : headY > 0.28
+          ? "Move down in the frame so your head sits near the top"
+          : footY < 0.72
+            ? "Step back until both feet are visible at the bottom"
+            : "Keep head near the top of the frame and both feet visible",
+    },
+    {
+      id: "centered",
+      ok: centered,
+      label: centered
+        ? "You are centered and facing the camera"
+        : Number.isFinite(midX) && midX <= 0.32
+          ? "Shift toward the center of the frame"
+          : Number.isFinite(midX) && midX >= 0.68
+            ? "Shift toward the center of the frame"
+            : "Stand in the center, facing the camera",
+    },
+    {
+      id: "distance",
+      ok: distanceOk,
+      label: distanceOk
+        ? "Distance looks good"
+        : Number.isFinite(shoulderW) && shoulderW >= 0.48
+          ? "Step back — you are too close"
+          : Number.isFinite(span) && span <= 0.45
+            ? "Step a little closer so we can see you clearly"
+            : "Stand 6–8 feet back so there is space around you",
+    },
+  ];
+
+  return { ready: hints.every((h) => h.ok), hints };
+}
+

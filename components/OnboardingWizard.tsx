@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { formatBiomarkerSummaryLine } from "@/lib/biomarker-format";
+import { MovementScreenResults } from "@/components/MovementScreenResults";
 import { OnboardingCameraAssessment } from "@/components/OnboardingCameraAssessment";
 import {
   onboardingBiomarkerFieldLabels,
@@ -107,10 +108,10 @@ export function OnboardingWizard() {
         if (data.ageYears == null || Number.isNaN(data.ageYears))
           return `Enter ${onboardingBiomarkerFieldLabels.ageYears.toLowerCase()}.`;
         if (data.ageYears < 16 || data.ageYears > 100) return "Age should be between 16 and 100.";
+        if (!data.sexForMetrics) return "Select an option for calorie estimates (or Prefer not to say).";
         return null;
       case 1:
-        if (!data.sexForMetrics) return "Select an option for BMR and body-composition estimates.";
-        if (!data.cameraAssessment) return "Complete the camera movement scan (or use Re-scan if it failed).";
+        if (!data.cameraAssessment) return "Complete the camera movement screen (or use Re-scan if it failed).";
         return null;
       case 2:
         if (data.equipmentAccess.length === 0) return "Choose at least one training environment or equipment option.";
@@ -197,6 +198,7 @@ export function OnboardingWizard() {
             <h2 className="font-display text-xl font-semibold text-gymsanity-950">About you</h2>
             <p className="mt-1 text-sm text-gymsanity-800/85">
               Height, weight, and age help us contextualize load and recovery—they stay private to you and your coach.
+              Sex is only used later for calorie estimates, not for the movement screen.
             </p>
           </div>
 
@@ -426,6 +428,30 @@ export function OnboardingWizard() {
               />
             </div>
           </div>
+
+          <fieldset>
+            <legend className={label}>Sex (for calorie estimates only)</legend>
+            <div className="mt-2 grid gap-2 sm:grid-cols-3">
+              {(
+                [
+                  ["male", "Male"],
+                  ["female", "Female"],
+                  ["prefer_not", "Prefer not to say"],
+                ] as const
+              ).map(([k, text]) => (
+                <label key={k} className={option}>
+                  <input
+                    type="radio"
+                    name="sex-metrics"
+                    checked={data.sexForMetrics === k}
+                    onChange={() => setData((d) => ({ ...d, sexForMetrics: k }))}
+                    className="text-gymsanity-700"
+                  />
+                  {text}
+                </label>
+              ))}
+            </div>
+          </fieldset>
         </section>
       )}
 
@@ -434,10 +460,6 @@ export function OnboardingWizard() {
         data.weightKg != null &&
         data.ageYears != null && (
           <OnboardingCameraAssessment
-            heightCm={data.heightCm}
-            weightKg={data.weightKg}
-            ageYears={data.ageYears}
-            sexForMetrics={data.sexForMetrics}
             cameraAssessment={data.cameraAssessment}
             onPatch={(patch) => setData((d) => ({ ...d, ...patch }))}
           />
@@ -717,17 +739,10 @@ export function OnboardingWizard() {
             {data.cameraAssessment ? (
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wide text-gymsanity-600">
-                  Metabolic & movement (camera)
+                  Movement screen
                 </dt>
                 <dd>
-                  BMR ~{data.cameraAssessment.bmrKcal} kcal/day · body fat ~{data.cameraAssessment.bodyFatPercentEstimate}
-                  %
-                  {data.cameraAssessment.leanMassKg != null &&
-                  data.cameraAssessment.skeletalMuscleMassEstimateKg != null
-                    ? ` · lean ~${data.cameraAssessment.leanMassKg} kg · muscle ~${data.cameraAssessment.skeletalMuscleMassEstimateKg} kg (est.)`
-                    : ""}{" "}
-                  · shoulder {data.cameraAssessment.mobility.shoulderMobility} · hips / squat{" "}
-                  {data.cameraAssessment.mobility.hipMobility} · overall {data.cameraAssessment.mobility.overallMobility}
+                  <MovementScreenResults assessment={data.cameraAssessment} compact />
                 </dd>
               </div>
             ) : null}

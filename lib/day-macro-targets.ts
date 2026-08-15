@@ -8,7 +8,7 @@ export type DailyMacroTargets = {
   fatG: number;
   bmrKcal: number;
   tdeeKcal: number;
-  source: "camera_bmr" | "calculated_bmr";
+  source: "calculated_bmr";
   goalNote: string;
 };
 
@@ -19,7 +19,6 @@ const ACTIVITY: Record<OnboardingProfile["sessionsPerWeek"], number> = {
 };
 
 function resolveBmr(profile: OnboardingProfile): number | null {
-  if (profile.cameraAssessment?.bmrKcal) return profile.cameraAssessment.bmrKcal;
   if (
     profile.heightCm == null ||
     profile.weightKg == null ||
@@ -84,7 +83,7 @@ export function dailyMacroTargetsFromProfile(
     fatG,
     bmrKcal: bmr,
     tdeeKcal: Math.round(tdeeBase),
-    source: profile.cameraAssessment?.bmrKcal ? "camera_bmr" : "calculated_bmr",
+    source: "calculated_bmr",
     goalNote: note,
   };
 }
