@@ -37,7 +37,7 @@ export function FitnessRules() {
 
   return (
     <section
-      className="w-full max-w-2xl"
+      className="w-full max-w-2xl min-w-0"
       aria-labelledby="fitness-rules-title"
       aria-live="polite"
     >
@@ -48,7 +48,7 @@ export function FitnessRules() {
         Fitness Rules — one principle at a time
       </h2>
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-white/55 bg-white/75 p-6 shadow-lg shadow-gymsanity-950/10 backdrop-blur-md md:p-8">
+      <div className="mt-4 overflow-hidden rounded-2xl border border-white/55 bg-white/75 p-4 shadow-lg shadow-gymsanity-950/10 backdrop-blur-md sm:p-6 md:p-8">
         <div className="flex items-start justify-between gap-3">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gymsanity-600">
             Rule {index + 1} of {RULES.length}
@@ -57,7 +57,7 @@ export function FitnessRules() {
             <button
               type="button"
               onClick={() => go(index - 1)}
-              className="rounded-full border border-gymsanity-200/80 bg-white/90 px-2.5 py-1 text-sm font-medium text-gymsanity-800 shadow-sm transition hover:border-gymsanity-300 hover:bg-white"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-gymsanity-200/80 bg-white/90 px-2.5 py-1 text-sm font-medium text-gymsanity-800 shadow-sm transition hover:border-gymsanity-300 hover:bg-white"
               aria-label="Previous rule"
             >
               ←
@@ -65,7 +65,7 @@ export function FitnessRules() {
             <button
               type="button"
               onClick={() => go(index + 1)}
-              className="rounded-full border border-gymsanity-200/80 bg-white/90 px-2.5 py-1 text-sm font-medium text-gymsanity-800 shadow-sm transition hover:border-gymsanity-300 hover:bg-white"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-gymsanity-200/80 bg-white/90 px-2.5 py-1 text-sm font-medium text-gymsanity-800 shadow-sm transition hover:border-gymsanity-300 hover:bg-white"
               aria-label="Next rule"
             >
               →
@@ -78,7 +78,7 @@ export function FitnessRules() {
           className="motion-safe:animate-fitness-rule-in motion-reduce:animate-none mt-5 min-h-[5.5rem] md:min-h-[5rem]"
         >
           <div className="border-l-[3px] border-gymsanity-500/80 pl-4">
-            <p className="font-display text-2xl font-semibold leading-snug tracking-tight text-gymsanity-950 md:text-[1.65rem]">
+            <p className="font-display text-[clamp(1.25rem,4.5vw,1.65rem)] font-semibold leading-snug tracking-tight text-gymsanity-950">
               {rule.headline}
             </p>
             <p className="mt-3 text-base leading-relaxed text-gymsanity-900/80 md:text-[1.05rem]">

@@ -7,11 +7,16 @@
   --foreground: #2e1065;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   color: var(--foreground);
   background: radial-gradient(1200px 600px at 10% -10%, rgba(167, 139, 250, 0.25), transparent),
     radial-gradient(900px 500px at 100% 0%, rgba(196, 181, 253, 0.2), transparent),
     var(--background);
   min-height: 100vh;
+  min-height: 100dvh;
   -webkit-tap-highlight-color: transparent;
 }
