@@ -1,17 +1,11 @@
 import Link from "next/link";
 import { FitnessRules } from "@/components/FitnessRules";
+import { HeroSlideshow } from "@/components/HeroSlideshow";
 
 export default function HomePage() {
   return (
     <div className="relative isolate min-h-dvh w-full overflow-x-hidden">
-      <div
-        className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage:
-            "linear-gradient(135deg, rgba(46,16,101,0.72), rgba(124,58,237,0.40)), url('/images/aliou-sprint-hero.png')",
-        }}
-      />
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-white/35" />
+      <HeroSlideshow />
 
       <div className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-6 lg:px-8">
         <header className="flex items-center justify-between gap-3">
