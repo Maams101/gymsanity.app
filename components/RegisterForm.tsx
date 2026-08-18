@@ -70,6 +70,10 @@ export function RegisterForm() {
       <div>
         <h1 className="font-display text-2xl font-semibold text-gymsanity-950">Join Gymsanity</h1>
         <p className="mt-1 text-sm text-gymsanity-900/75">Membership, programming, and booking in one place.</p>
+        <p className="mt-2 text-xs text-gymsanity-800/80">
+          Creating an account also adds you to the Gymsanity newsletter. Unsubscribe anytime from Settings or any
+          email.
+        </p>
         {afterRegister === "/onboarding" && (
           <p className="mt-2 rounded-xl border border-violet-100 bg-violet-50/80 px-3 py-2 text-xs text-violet-950">
             After you create your account: short onboarding (fitness, goals, habits, health), then
@@ -125,7 +129,9 @@ export function RegisterForm() {
           {plans.length === 0 && (
             <>
               <option value="digital">Digital</option>
-              <option value="elite">Elite 1:1</option>
+              <option value="sessions-6">6 sessions</option>
+              <option value="sessions-12">12 sessions</option>
+              <option value="sessions-24">24 sessions</option>
             </>
           )}
         </select>

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalDocument title="Privacy Policy" lastUpdated="July 9, 2026">
+    <LegalDocument title="Privacy Policy" lastUpdated="August 15, 2026">
       <p>
         Gymsanity (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) operates the Gymsanity fitness platform at{" "}
         <a href="https://gymsanity.fit" className="text-gymsanity-700 underline">
@@ -24,6 +24,10 @@ export default function PrivacyPage() {
           <li>
             <strong>Account information:</strong> name, email address, password (stored as a secure hash),
             and membership plan details when you register or subscribe.
+          </li>
+          <li>
+            <strong>Newsletter:</strong> email address and optional first name when you join the Gymsanity
+            list when you create an account.
           </li>
           <li>
             <strong>Workout and program data:</strong> assigned programs, session completion, logged sets and
@@ -64,6 +68,10 @@ export default function PrivacyPage() {
           <li>Personalize workouts, recovery guidance, and progress tracking.</li>
           <li>Process payments and manage subscriptions through Stripe.</li>
           <li>Communicate about your account, sessions, and service updates.</li>
+          <li>
+            Send optional newsletter emails (training notes and studio updates) if you are on the list.
+            Every newsletter includes an unsubscribe link.
+          </li>
           <li>Improve features, fix bugs, and protect against fraud or abuse.</li>
           <li>Comply with legal obligations.</li>
         </ul>
@@ -123,6 +131,10 @@ export default function PrivacyPage() {
           <li>Update profile information in Settings.</li>
           <li>Disconnect third-party fitness integrations in Settings.</li>
           <li>Manage or cancel subscriptions via Stripe customer portal (linked from billing flows).</li>
+          <li>
+            Unsubscribe from the newsletter via the link in any newsletter email, or from Settings if you
+            have an account.
+          </li>
           <li>
             Request account deletion or a copy of your data by contacting{" "}
             <a href="mailto:privacy@gymsanity.fit" className="text-gymsanity-700 underline">

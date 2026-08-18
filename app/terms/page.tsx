@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <LegalDocument title="Terms of Service" lastUpdated="July 9, 2026">
+    <LegalDocument title="Terms of Service" lastUpdated="August 15, 2026">
       <p>
         These Terms of Service (&quot;Terms&quot;) govern your access to and use of Gymsanity&apos;s website,
         mobile applications, and related services (collectively, the &quot;Service&quot;). By creating an
@@ -118,6 +118,15 @@ export default function TermsPage() {
             Privacy Policy
           </a>
           , which is incorporated into these Terms.
+        </p>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="font-display text-lg font-semibold text-gymsanity-950">Newsletter</h2>
+        <p>
+          Creating an account adds you to the Gymsanity email list for occasional training notes and studio
+          updates. You may unsubscribe at any time using the link in those emails or from Settings. Account
+          and billing messages are separate from the newsletter.
         </p>
       </section>
 

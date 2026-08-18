@@ -83,6 +83,40 @@ model User {
   coachWorkoutsOfDay    CoachWorkoutOfDay[]
   workoutOfDayAttempts  WorkoutOfDayAttempt[]
   fitnessConnections    FitnessConnection[]
+  newsletterSubscriptions NewsletterSubscriber[]
+}
+
+enum NewsletterSource {
+  SIGNUP
+  HOMEPAGE
+}
+
+model NewsletterSubscriber {
+  id               String            @id @default(cuid())
+  email            String            @unique
+  name             String?
+  source           NewsletterSource
+  userId           String?           @map("user_id")
+  unsubscribeToken String            @unique @map("unsubscribe_token")
+  subscribedAt     DateTime          @default(now()) @map("subscribed_at")
+  unsubscribedAt   DateTime?         @map("unsubscribed_at")
+  welcomeSentAt    DateTime?         @map("welcome_sent_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([unsubscribedAt])
+}
+
+model NewsletterBroadcast {
+  id             String   @id @default(cuid())
+  subject        String
+  body           String   @db.Text
+  sentAt         DateTime @default(now()) @map("sent_at")
+  recipientCount Int      @map("recipient_count")
+  coachUserId    String   @map("coach_user_id")
+
+  @@index([sentAt])
 }
 
 /// Per-member nutrition notes from coach; goal-based playbooks are derived from onboarding separately.

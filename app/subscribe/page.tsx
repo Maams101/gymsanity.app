@@ -19,7 +19,9 @@ export default async function SubscribePage({ searchParams }: { searchParams: Se
   const purchasable = offeredPlans.filter((p) => Boolean(p.stripePriceId));
   const priceEnvHint: Record<string, string> = {
     digital: "STRIPE_PRICE_DIGITAL",
-    elite: "STRIPE_PRICE_ELITE",
+    "sessions-6": "STRIPE_PRICE_SESSIONS_6",
+    "sessions-12": "STRIPE_PRICE_SESSIONS_12",
+    "sessions-24": "STRIPE_PRICE_SESSIONS_24",
   };
 
   return (
@@ -38,28 +40,13 @@ export default async function SubscribePage({ searchParams }: { searchParams: Se
         Membership
       </p>
       <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-gymsanity-950">
-        Choose your Gymsanity plan
+        Choose a session pack
       </h1>
       <p className="mt-3 max-w-2xl text-sm leading-relaxed text-gymsanity-900/80">
-        You&apos;re almost in. Pick the tier that fits how you want to train—then complete secure
-        checkout with Stripe
-        {embeddedAvailable ? " (in-app, powered by Stripe)" : ""}. After payment, you&apos;ll have
-        full access to programming and booking.
+        1:1 coaching is sold in 6, 12, or 24 session packages. The 6-pack is $170 per session; 12-
+        and 24-packs take $5 and $10 off that rate. After payment, credits land in your account for
+        booking.
       </p>
-
-      {stripeOn && (
-        <div className="mt-6 rounded-2xl border border-violet-200/80 bg-violet-50/60 px-4 py-3 text-sm text-gymsanity-950">
-          <p className="font-semibold text-gymsanity-950">Stripe billing</p>
-          <ul className="mt-2 list-inside list-disc space-y-1 text-gymsanity-900/85">
-            <li>API keys detected — subscription checkout can run once recurring price IDs are linked.</li>
-            <li>
-              {embeddedAvailable
-                ? "In-app checkout is on (publishable key set)."
-                : "In-app checkout is off — add NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY for the modal, or members still use redirect checkout once prices exist."}
-            </li>
-          </ul>
-        </div>
-      )}
 
       {!stripeOn ? (
         <p className="mt-8 rounded-2xl border border-gymsanity-200 bg-white/90 p-6 text-sm text-gymsanity-900">

@@ -2,6 +2,11 @@
 
 import { loadStripe } from "@stripe/stripe-js";
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  formatUsdFromCents,
+  packTotalCents,
+  sessionPackBySlug,
+} from "@/lib/session-packs";
 
 export type SubscribePlanCard = {
   id: string;
@@ -58,6 +63,14 @@ export function SubscribePlans({
     if (url) window.location.href = url;
   }, []);
 
+  const packs = plans.filter((p) => p.billingType === "ONE_TIME");
+  const subscriptions = plans.filter((p) => p.billingType === "SUBSCRIPTION");
+
+  function pay(slug: string) {
+    if (embeddedAvailable) openEmbedded(slug);
+    else void startRedirectCheckout(slug);
+  }
+
   return (
     <>
       {error && !embeddedSlug && (
@@ -65,68 +78,101 @@ export function SubscribePlans({
           {error}
         </p>
       )}
-      <ul className="mt-10 grid gap-5 md:grid-cols-2">
-        {plans.map((p) => (
-          <li
-            key={p.id}
-            className="flex flex-col rounded-2xl border border-gymsanity-100 bg-white/90 p-6 shadow-sm shadow-gymsanity-900/5"
-          >
-            <h2 className="font-display text-xl font-semibold text-gymsanity-950">{p.name}</h2>
-            <p className="mt-2 flex-1 text-sm leading-relaxed text-gymsanity-900/75">
-              {p.description}
-            </p>
-            <ul className="mt-4 space-y-1 text-xs text-gymsanity-800/90">
-              {p.billingType === "ONE_TIME" ? (
-                <>
-                  <li>
-                    ✓ {p.oneOnOneCreditsPerMonth}{" "}
-                    {p.oneOnOneCreditsPerMonth === 1
-                      ? "× 60-minute 1-on-1 session"
-                      : "× 60-minute 1-on-1 sessions"}{" "}
-                    after checkout
-                  </li>
-                  <li>✓ Book private slots with session credits</li>
-                  {p.includesDigitalPrograms ? (
-                    <li>✓ Program library &amp; app access</li>
+
+      {packs.length > 0 ? (
+        <section className="mt-10">
+          <h2 className="font-display text-xl font-semibold text-gymsanity-950">Session packages</h2>
+          <p className="mt-1 text-sm text-gymsanity-800/85">
+            1:1 coaching packs. Larger packs lower the price per session.
+          </p>
+          <ul className="mt-5 grid gap-5 md:grid-cols-3">
+            {packs.map((p) => {
+              const pack = sessionPackBySlug(p.slug);
+              const perSession = pack
+                ? formatUsdFromCents(pack.pricePerSessionCents)
+                : null;
+              const total = pack ? formatUsdFromCents(packTotalCents(pack)) : null;
+              const savings = pack?.savingsPerSessionCents
+                ? formatUsdFromCents(pack.savingsPerSessionCents)
+                : null;
+              return (
+                <li
+                  key={p.id}
+                  className="flex flex-col rounded-2xl border border-gymsanity-100 bg-white/90 p-6 shadow-sm shadow-gymsanity-900/5"
+                >
+                  <h3 className="font-display text-xl font-semibold text-gymsanity-950">{p.name}</h3>
+                  {total ? (
+                    <p className="mt-3 font-display text-3xl font-semibold tabular-nums text-gymsanity-950">
+                      {total}
+                    </p>
+                  ) : null}
+                  {perSession ? (
+                    <p className="mt-1 text-sm font-medium text-gymsanity-700">
+                      {perSession} per session
+                    </p>
+                  ) : null}
+                  {savings ? (
+                    <p className="mt-1 text-xs font-semibold text-green-800">
+                      Save {savings} per session vs the 6-pack
+                    </p>
                   ) : (
-                    <li>— Program library not included</li>
+                    <p className="mt-1 text-xs text-gymsanity-600">Base rate</p>
                   )}
-                </>
-              ) : (
-                <>
+                  <ul className="mt-4 flex-1 space-y-1 text-xs text-gymsanity-800/90">
+                    <li>
+                      ✓ {p.oneOnOneCreditsPerMonth} × 60-minute 1-on-1 sessions after checkout
+                    </li>
+                    <li>✓ Book private slots with session credits</li>
+                    <li>✓ Program library &amp; app access</li>
+                  </ul>
+                  <button
+                    type="button"
+                    onClick={() => pay(p.slug)}
+                    disabled={redirectLoading === p.slug}
+                    className="mt-6 inline-flex w-full justify-center rounded-full bg-gymsanity-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gymsanity-800 disabled:opacity-60"
+                  >
+                    {redirectLoading === p.slug ? "Redirecting…" : `Buy ${p.name}`}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
+
+      {subscriptions.length > 0 ? (
+        <section className={packs.length > 0 ? "mt-12" : "mt-10"}>
+          {packs.length > 0 ? (
+            <h2 className="font-display text-xl font-semibold text-gymsanity-950">App membership</h2>
+          ) : null}
+          <ul className={`grid gap-5 md:grid-cols-2 ${packs.length > 0 ? "mt-5" : ""}`}>
+            {subscriptions.map((p) => (
+              <li
+                key={p.id}
+                className="flex flex-col rounded-2xl border border-gymsanity-100 bg-white/90 p-6 shadow-sm shadow-gymsanity-900/5"
+              >
+                <h3 className="font-display text-xl font-semibold text-gymsanity-950">{p.name}</h3>
+                <p className="mt-2 flex-1 text-sm leading-relaxed text-gymsanity-900/75">
+                  {p.description}
+                </p>
+                <ul className="mt-4 space-y-1 text-xs text-gymsanity-800/90">
                   <li>{p.includesDigitalPrograms ? "✓ Digital programming" : "— No digital library"}</li>
                   <li>{p.allowsGroupBooking ? "✓ Group sessions" : "— No group booking"}</li>
-                  <li>
-                    {p.allowsOneOnOneBooking
-                      ? `✓ 1:1 coaching (${p.oneOnOneCreditsPerMonth} credits / mo)`
-                      : "— No 1:1 booking"}
-                  </li>
-                </>
-              )}
-            </ul>
-            <div className="mt-6">
-              <button
-                type="button"
-                onClick={() =>
-                  embeddedAvailable ? openEmbedded(p.slug) : void startRedirectCheckout(p.slug)
-                }
-                disabled={redirectLoading === p.slug}
-                className="inline-flex w-full justify-center rounded-full bg-gymsanity-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gymsanity-800 disabled:opacity-60"
-              >
-                {redirectLoading === p.slug
-                  ? "Redirecting…"
-                  : p.billingType === "ONE_TIME"
-                    ? embeddedAvailable
-                      ? `Buy now — ${p.name}`
-                      : `Purchase — ${p.name}`
-                    : embeddedAvailable
-                      ? `Pay with Stripe — ${p.name}`
-                      : `Subscribe — ${p.name}`}
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
+                  <li>— 1:1 sessions sold separately as packs</li>
+                </ul>
+                <button
+                  type="button"
+                  onClick={() => pay(p.slug)}
+                  disabled={redirectLoading === p.slug}
+                  className="mt-6 inline-flex w-full justify-center rounded-full border border-gymsanity-300 bg-white px-5 py-2.5 text-sm font-semibold text-gymsanity-900 hover:bg-gymsanity-50 disabled:opacity-60"
+                >
+                  {redirectLoading === p.slug ? "Redirecting…" : `Subscribe — ${p.name}`}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {embeddedSlug && (
         <EmbeddedCheckoutModal

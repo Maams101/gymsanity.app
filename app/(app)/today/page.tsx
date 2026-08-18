@@ -125,6 +125,12 @@ export default async function TodayPage() {
       {membership && userRow?.stripeCustomerId ? (
         <div className="rounded-2xl border border-gymsanity-100 bg-white/90 p-4">
           <ManageBillingButton />
+          <Link
+            href="/subscribe"
+            className="mt-3 inline-block text-sm font-semibold text-gymsanity-800 underline-offset-2 hover:underline"
+          >
+            Buy a session pack
+          </Link>
         </div>
       ) : null}
     </div>

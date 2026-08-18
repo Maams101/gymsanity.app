@@ -62,6 +62,14 @@ export async function POST(request: Request) {
       where: { id: pendingMembership.id },
       data: { planId: plan.id },
     });
+  } else if (!pendingMembership) {
+    await prisma.membership.create({
+      data: {
+        userId: user.id,
+        planId: plan.id,
+        active: false,
+      },
+    });
   }
 
   const stripe = getStripe();
@@ -78,7 +86,7 @@ export async function POST(request: Request) {
   const shared = {
     line_items: [{ price: plan.stripePriceId, quantity: 1 }],
     client_reference_id: user.id,
-    metadata: { userId: user.id },
+    metadata: { userId: user.id, planSlug: plan.slug },
     ...(user.stripeCustomerId
       ? { customer: user.stripeCustomerId }
       : { customer_email: user.email }),
@@ -90,7 +98,7 @@ export async function POST(request: Request) {
       : {
           mode: "subscription" as const,
           ...shared,
-          subscription_data: { metadata: { userId: user.id } },
+          subscription_data: { metadata: { userId: user.id, planSlug: plan.slug } },
         };
 
   const checkout = embedded

@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { FitnessIntegrationsPanel } from "@/components/settings/FitnessIntegrationsPanel";
+import { NewsletterPreferenceToggle } from "@/components/NewsletterPreferenceToggle";
 import { prisma } from "@/lib/db";
 import { getMemberFitnessConnections } from "@/lib/fitness-connections";
 import { getSession } from "@/lib/get-session";
+import { getSubscriptionForUser } from "@/lib/newsletter";
 import { getActiveMembership, getCreditBalance } from "@/lib/membership";
 
 export default async function SettingsPage() {
   const session = await getSession();
   if (!session) return null;
 
-  const [user, membership, credits, connections] = await Promise.all([
+  const [user, membership, credits, connections, newsletter] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.sub },
       select: { name: true, email: true },
@@ -17,6 +19,7 @@ export default async function SettingsPage() {
     getActiveMembership(session.sub),
     getCreditBalance(session.sub),
     getMemberFitnessConnections(session.sub),
+    getSubscriptionForUser(session.sub, session.email),
   ]);
 
   return (
@@ -69,6 +72,8 @@ export default async function SettingsPage() {
           </li>
         </ul>
       </section>
+
+      <NewsletterPreferenceToggle initialSubscribed={Boolean(newsletter && !newsletter.unsubscribedAt)} />
 
       <FitnessIntegrationsPanel initialConnections={connections} />
 

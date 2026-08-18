@@ -1,15 +1,17 @@
+import { NewsletterSource } from "@prisma/client";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { COOKIE, signSession } from "@/lib/auth";
+import { upsertNewsletterSubscription } from "@/lib/newsletter";
 import { isStripeConfigured } from "@/lib/stripe";
 
 const schema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(8),
-  planSlug: z.enum(["digital", "elite"]).default("digital"),
+  planSlug: z.enum(["digital", "sessions-6", "sessions-12", "sessions-24"]).default("digital"),
 });
 
 export async function POST(request: Request) {
@@ -54,6 +56,13 @@ export async function POST(request: Request) {
         balance: 0,
       },
     });
+
+    await upsertNewsletterSubscription({
+      email: user.email,
+      name: user.name,
+      source: NewsletterSource.SIGNUP,
+      userId: user.id,
+    }).catch((err) => console.error("newsletter subscribe on register failed", err));
 
     const token = await signSession({
       sub: user.id,
@@ -105,6 +114,13 @@ export async function POST(request: Request) {
       },
     });
   }
+
+  await upsertNewsletterSubscription({
+    email: user.email,
+    name: user.name,
+    source: NewsletterSource.SIGNUP,
+    userId: user.id,
+  }).catch((err) => console.error("newsletter subscribe on register failed", err));
 
   const token = await signSession({
     sub: user.id,

@@ -8,7 +8,8 @@ import { prisma } from "@/lib/db";
 export async function activateMembershipAfterOneTimePayment(
   userId: string,
   stripeCustomerId: string,
-  checkoutSessionId: string
+  checkoutSessionId: string,
+  planSlug?: string | null
 ) {
   await prisma.$transaction(async (tx) => {
     const dup = await tx.membership.findFirst({
@@ -16,11 +17,29 @@ export async function activateMembershipAfterOneTimePayment(
     });
     if (dup) return;
 
-    const membership = await tx.membership.findFirst({
+    let membership = await tx.membership.findFirst({
       where: { userId, active: false },
       orderBy: { startedAt: "desc" },
       include: { plan: true },
     });
+
+    if (
+      (!membership || membership.plan.billingType !== PlanBillingType.ONE_TIME) &&
+      planSlug
+    ) {
+      const plan = await tx.plan.findUnique({ where: { slug: planSlug } });
+      if (plan?.billingType === PlanBillingType.ONE_TIME) {
+        membership = await tx.membership.create({
+          data: {
+            userId,
+            planId: plan.id,
+            active: false,
+          },
+          include: { plan: true },
+        });
+      }
+    }
+
     if (!membership || membership.plan.billingType !== PlanBillingType.ONE_TIME) return;
 
     await tx.user.update({

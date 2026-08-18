@@ -48,7 +48,12 @@ export async function POST(request: Request) {
               : session.subscription.id;
           await activateMembershipAfterCheckout(userId, subId, customerId);
         } else if (session.mode === "payment") {
-          await activateMembershipAfterOneTimePayment(userId, customerId, session.id);
+          await activateMembershipAfterOneTimePayment(
+            userId,
+            customerId,
+            session.id,
+            session.metadata?.planSlug
+          );
         }
         break;
       }

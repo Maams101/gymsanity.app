@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { BookingStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { CoachCreateSlotForm } from "@/components/CoachCreateSlotForm";
@@ -48,6 +49,19 @@ export default async function CoachPage() {
       />
 
       <CoachCreateSlotForm />
+
+      <div className="rounded-2xl border border-gymsanity-100 bg-white/90 p-6 shadow-sm">
+        <h2 className="font-display text-lg font-semibold text-gymsanity-950">Newsletter</h2>
+        <p className="mt-2 text-sm text-gymsanity-900/75">
+          Send training notes to everyone who joins Gymsanity — with or without an active plan.
+        </p>
+        <Link
+          href="/coach/newsletter"
+          className="mt-4 inline-flex rounded-full bg-gymsanity-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gymsanity-800"
+        >
+          Write a note
+        </Link>
+      </div>
 
       <div className="rounded-2xl border border-gymsanity-100 bg-white/90 p-6 shadow-sm">
         <h2 className="font-display text-lg font-semibold text-gymsanity-950">Upcoming bookings</h2>
