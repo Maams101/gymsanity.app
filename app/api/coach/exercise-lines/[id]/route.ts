@@ -36,6 +36,26 @@ export async function DELETE(_request: Request, { params }: Params) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
+  const line = await prisma.exerciseLine.findUnique({
+    where: { id },
+    select: { programDayId: true, pairGroupId: true },
+  });
+  if (!line) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   await prisma.exerciseLine.delete({ where: { id } });
+
+  if (line.pairGroupId) {
+    const remaining = await prisma.exerciseLine.findMany({
+      where: { pairGroupId: line.pairGroupId },
+      select: { id: true },
+    });
+    if (remaining.length === 1) {
+      await prisma.exerciseLine.update({
+        where: { id: remaining[0]!.id },
+        data: { pairGroupId: null, pairType: null, pairOrder: null },
+      });
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }

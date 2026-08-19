@@ -34,6 +34,11 @@ enum ExerciseLineSection {
   STRENGTH
 }
 
+enum ExercisePairType {
+  SUPERSET
+  CIRCUIT
+}
+
 enum FitnessProvider {
   APPLE_HEALTH
   GOOGLE_FIT
@@ -85,6 +90,7 @@ model User {
   fitnessConnections    FitnessConnection[]
   newsletterSubscriptions NewsletterSubscriber[]
   focusGroupInviteUsed  FocusGroupInvite[]
+  focusGroupFeedback    FocusGroupFeedback[]
 }
 
 enum NewsletterSource {
@@ -227,6 +233,11 @@ model ExerciseLine {
   section        ExerciseLineSection @default(STRENGTH) @map("section")
   /// How many sets the member can check off (1–20).
   setCount       Int                 @default(3) @map("set_count")
+  /// Shared id for lines paired as a superset or circuit.
+  pairGroupId    String?             @map("pair_group_id")
+  pairType       ExercisePairType?   @map("pair_type")
+  /// Order within the pair group (1 = A, 2 = B, …).
+  pairOrder      Int?                @map("pair_order")
 
   programDay ProgramDay @relation(fields: [programDayId], references: [id], onDelete: Cascade)
   setLogs              ExerciseSetLog[]
@@ -234,6 +245,7 @@ model ExerciseLine {
 
   @@index([programDayId])
   @@index([exerciseId])
+  @@index([pairGroupId])
 }
 
 /// Member checked off a set for an exercise line in a session.
@@ -421,4 +433,18 @@ model FocusGroupInvite {
   usedBy User? @relation(fields: [usedByUserId], references: [id], onDelete: SetNull)
 
   @@index([token])
+}
+
+/// Feedback submitted by focus-group members during beta testing.
+model FocusGroupFeedback {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  message   String   @db.Text
+  rating    Int?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
 }

@@ -2,6 +2,13 @@
 
 import Link from "next/link";
 import {
+  groupLinesForDisplay,
+  pairFlowHint,
+  pairLetter,
+  pairTypeLabel,
+  type ExercisePairType,
+} from "@/lib/exercise-pairing";
+import {
   MUSCLE_GROUP_LABELS,
   MUSCLE_GROUPS_ORDER,
   parseMuscleGroup,
@@ -18,6 +25,9 @@ type Line = {
   exerciseId: string | null;
   section: "MOVEMENT_PREP" | "STRENGTH";
   setCount: number;
+  pairGroupId: string | null;
+  pairType: ExercisePairType | null;
+  pairOrder: number | null;
 };
 type Day = {
   id: string;
@@ -141,6 +151,7 @@ export function ProgramBuilder({
   const [lineSection, setLineSection] = useState<Record<string, "MOVEMENT_PREP" | "STRENGTH">>({});
   const [addSetsDraft, setAddSetsDraft] = useState<Record<string, string>>({});
   const [addSetsError, setAddSetsError] = useState<Record<string, string | null>>({});
+  const [selectedLines, setSelectedLines] = useState<Record<string, Set<string>>>({});
 
   const exercisesByMuscleGroup = useMemo(() => {
     const map = new Map<MuscleGroup, Ex[]>();
@@ -227,10 +238,115 @@ export function ProgramBuilder({
     await refresh();
   }
 
-  async function deleteLine(id: string) {
+  async function deleteLine(id: string, dayId: string) {
     if (!confirm("Remove this line?")) return;
     await fetch(`/api/coach/exercise-lines/${id}`, { method: "DELETE" });
+    setSelectedLines((s) => {
+      const next = { ...s };
+      next[dayId]?.delete(id);
+      return next;
+    });
     await refresh();
+  }
+
+  function toggleLineSelect(dayId: string, lineId: string) {
+    setSelectedLines((prev) => {
+      const set = new Set(prev[dayId] ?? []);
+      if (set.has(lineId)) set.delete(lineId);
+      else set.add(lineId);
+      return { ...prev, [dayId]: set };
+    });
+  }
+
+  async function pairSelected(dayId: string, pairType: ExercisePairType) {
+    const ids = [...(selectedLines[dayId] ?? [])];
+    if (ids.length < 2) return;
+    setBusy(true);
+    const res = await fetch("/api/coach/exercise-lines/pair", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lineIds: ids, pairType }),
+    });
+    setBusy(false);
+    if (!res.ok) return;
+    setSelectedLines((s) => ({ ...s, [dayId]: new Set() }));
+    await refresh();
+  }
+
+  async function unpairSelected(dayId: string) {
+    const ids = [...(selectedLines[dayId] ?? [])];
+    if (ids.length === 0) return;
+    setBusy(true);
+    await fetch("/api/coach/exercise-lines/pair", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lineIds: ids }),
+    });
+    setBusy(false);
+    setSelectedLines((s) => ({ ...s, [dayId]: new Set() }));
+    await refresh();
+  }
+
+  function renderLineRow(dayId: string, ln: Line, indexLabel: string) {
+    const checked = selectedLines[dayId]?.has(ln.id) ?? false;
+    return (
+      <li
+        key={ln.id}
+        className="flex flex-col gap-2 rounded-xl border border-gymsanity-100 bg-gymsanity-50/40 p-3 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+      >
+        <div className="flex min-w-0 items-start gap-3">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={() => toggleLineSelect(dayId, ln.id)}
+            className="mt-1 rounded text-gymsanity-700"
+            aria-label={`Select ${ln.name}`}
+          />
+          <div className="min-w-0">
+            <span className="font-medium text-gymsanity-950">
+              {indexLabel}. {ln.name}
+              {ln.pairOrder ? (
+                <span className="ml-2 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-900">
+                  {pairLetter(ln.pairOrder)}
+                </span>
+              ) : null}
+            </span>
+            <span className="mt-0.5 block text-gymsanity-800/90">{ln.prescription}</span>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 pl-7 sm:pl-0">
+          <label className="flex items-center gap-1 text-xs text-gymsanity-800">
+            Section
+            <select
+              value={ln.section}
+              disabled={busy}
+              onChange={(e) =>
+                void patchLine(ln.id, {
+                  section: e.target.value as "MOVEMENT_PREP" | "STRENGTH",
+                })
+              }
+              className="rounded-lg border border-gymsanity-200 bg-white px-2 py-1 text-xs"
+            >
+              <option value="MOVEMENT_PREP">Movement prep</option>
+              <option value="STRENGTH">Strength</option>
+            </select>
+          </label>
+          <LineSetCountEditor
+            lineId={ln.id}
+            setCount={ln.setCount}
+            busy={busy}
+            onCommit={(n) => void patchLine(ln.id, { setCount: n })}
+          />
+          <button
+            type="button"
+            onClick={() => void deleteLine(ln.id, dayId)}
+            className="text-xs font-semibold text-red-600"
+          >
+            Remove
+          </button>
+        </div>
+      </li>
+    );
   }
 
   async function deleteDay(dayId: string) {
@@ -414,51 +530,60 @@ export function ProgramBuilder({
               </button>
             </div>
 
-            <ol className="mt-4 space-y-3 border-t border-gymsanity-50 pt-4">
-              {d.exercises.map((ln, i) => (
-                <li
-                  key={ln.id}
-                  className="flex flex-col gap-2 rounded-xl border border-gymsanity-100 bg-gymsanity-50/40 p-3 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0">
-                    <span className="font-medium text-gymsanity-950">
-                      {i + 1}. {ln.name}
-                    </span>
-                    <span className="mt-0.5 block text-gymsanity-800/90">{ln.prescription}</span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <label className="flex items-center gap-1 text-xs text-gymsanity-800">
-                      Section
-                      <select
-                        value={ln.section}
-                        disabled={busy}
-                        onChange={(e) =>
-                          void patchLine(ln.id, {
-                            section: e.target.value as "MOVEMENT_PREP" | "STRENGTH",
-                          })
-                        }
-                        className="rounded-lg border border-gymsanity-200 bg-white px-2 py-1 text-xs"
-                      >
-                        <option value="MOVEMENT_PREP">Movement prep</option>
-                        <option value="STRENGTH">Strength</option>
-                      </select>
-                    </label>
-                    <LineSetCountEditor
-                      lineId={ln.id}
-                      setCount={ln.setCount}
-                      busy={busy}
-                      onCommit={(n) => void patchLine(ln.id, { setCount: n })}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => void deleteLine(ln.id)}
-                      className="text-xs font-semibold text-red-600"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </li>
-              ))}
+            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gymsanity-50 pt-4">
+              <span className="text-xs font-semibold uppercase tracking-wide text-gymsanity-600">
+                Pair selected
+              </span>
+              <button
+                type="button"
+                disabled={busy || (selectedLines[d.id]?.size ?? 0) < 2}
+                onClick={() => void pairSelected(d.id, "SUPERSET")}
+                className="rounded-full border border-gymsanity-200 bg-white px-3 py-1.5 text-xs font-semibold text-gymsanity-900 hover:bg-gymsanity-50 disabled:opacity-50"
+              >
+                Superset
+              </button>
+              <button
+                type="button"
+                disabled={busy || (selectedLines[d.id]?.size ?? 0) < 2}
+                onClick={() => void pairSelected(d.id, "CIRCUIT")}
+                className="rounded-full border border-gymsanity-200 bg-white px-3 py-1.5 text-xs font-semibold text-gymsanity-900 hover:bg-gymsanity-50 disabled:opacity-50"
+              >
+                Circuit
+              </button>
+              <button
+                type="button"
+                disabled={busy || (selectedLines[d.id]?.size ?? 0) === 0}
+                onClick={() => void unpairSelected(d.id)}
+                className="rounded-full border border-red-100 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+              >
+                Unpair
+              </button>
+            </div>
+
+            <ol className="mt-3 space-y-3">
+              {groupLinesForDisplay(d.exercises).map((block, blockIdx) => {
+                if (block.kind === "single") {
+                  return renderLineRow(d.id, block.line, String(blockIdx + 1));
+                }
+                return (
+                  <li
+                    key={block.groupId}
+                    className="rounded-2xl border-2 border-dashed border-violet-200 bg-violet-50/40 p-3"
+                  >
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs font-bold uppercase tracking-wide text-violet-900">
+                        {pairTypeLabel(block.pairType)} · {block.lines.map((l) => pairLetter(l.pairOrder)).join(" → ")}
+                      </p>
+                      <p className="text-[11px] text-violet-900/80">
+                        {pairFlowHint(block.pairType, block.lines.length)}
+                      </p>
+                    </div>
+                    <ol className="space-y-2">
+                      {block.lines.map((ln, i) => renderLineRow(d.id, ln, `${blockIdx + 1}${pairLetter(ln.pairOrder) || String(i + 1)}`))}
+                    </ol>
+                  </li>
+                );
+              })}
             </ol>
 
             <div className="mt-4 flex flex-col gap-2 rounded-xl bg-gymsanity-50/80 p-4 sm:flex-row sm:flex-wrap sm:items-end">

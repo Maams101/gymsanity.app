@@ -87,6 +87,7 @@ export async function POST(request: Request) {
     line_items: [{ price: plan.stripePriceId, quantity: 1 }],
     client_reference_id: user.id,
     metadata: { userId: user.id, planSlug: plan.slug },
+    automatic_payment_methods: { enabled: true },
     ...(user.stripeCustomerId
       ? { customer: user.stripeCustomerId }
       : { customer_email: user.email }),

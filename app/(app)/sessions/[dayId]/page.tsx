@@ -8,6 +8,7 @@ import { CompleteSessionButton } from "@/components/CompleteSessionButton";
 import { SessionActiveMarker } from "@/components/nav/SessionActiveMarker";
 import { WorkoutSessionTracker } from "@/components/WorkoutSessionTracker";
 import { defaultLoadWeightUnitFromOnboarding } from "@/lib/load-weight-display";
+import { pairSizeForLine } from "@/lib/exercise-pairing";
 
 type Props = { params: Promise<{ dayId: string }> };
 
@@ -80,8 +81,9 @@ export default async function SessionPage({ params }: Props) {
       <div className="rounded-2xl border border-gymsanity-100 bg-white/90 p-6 shadow-sm">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-gymsanity-700">Session</h2>
         <p className="mt-2 text-sm text-gymsanity-900/75">
-          Count reps with the +/− counter, then tap Complete set—a recovery countdown starts automatically
-          between sets. For strength work, log weight in kg or lbs; entries show on your{" "}
+          Count reps with the +/− counter, then tap Complete set — a rest timer starts between sets and
+          chimes when it&apos;s time for the next set. For strength work, log weight in kg or lbs; entries
+          show on your{" "}
           <Link href="/progress" className="font-semibold text-gymsanity-900 underline hover:text-gymsanity-950">
             Load progression
           </Link>{" "}
@@ -102,6 +104,10 @@ export default async function SessionPage({ params }: Props) {
               setCount: ex.setCount,
               cues: ex.exercise?.cues ?? null,
               videoUrl: ex.exercise?.videoUrl ?? null,
+              pairGroupId: ex.pairGroupId,
+              pairType: ex.pairType,
+              pairOrder: ex.pairOrder,
+              pairSize: pairSizeForLine(ex, day.exercises),
             }))}
           />
         </div>

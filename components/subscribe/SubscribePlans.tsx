@@ -281,7 +281,7 @@ function EmbeddedCheckoutModal({
               Secure checkout
             </p>
             <p className="mt-0.5 text-xs text-gymsanity-800/80">
-              Powered by Stripe — card details stay on Stripe&apos;s secure form.
+              Pay with card, Apple Pay, or Link — secured by Stripe.
             </p>
           </div>
           <button

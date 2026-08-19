@@ -1,6 +1,7 @@
 "use client";
 
 import { ExerciseDemoModal } from "@/components/ExerciseDemoModal";
+import { RestAlertsControl } from "@/components/RestAlertsControl";
 import { SessionRestTimer } from "@/components/SessionRestTimer";
 import type { RestTimerState } from "@/lib/use-rest-countdown";
 import {
@@ -10,6 +11,14 @@ import {
 } from "@/lib/load-weight-display";
 import { kgToLbs, lbsToKg, roundWeightDisplay } from "@/lib/units";
 import { parseRestSeconds, parseTargetReps } from "@/lib/workout-prescription-parse";
+import {
+  groupLinesForDisplay,
+  pairFlowHint,
+  pairLetter,
+  pairTypeLabel,
+  type ExercisePairType,
+} from "@/lib/exercise-pairing";
+import { dismissRestAlerts } from "@/lib/rest-timer-notify";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -21,6 +30,10 @@ export type TrackerLine = {
   setCount: number;
   cues: string | null;
   videoUrl: string | null;
+  pairGroupId: string | null;
+  pairType: ExercisePairType | null;
+  pairOrder: number | null;
+  pairSize: number;
 };
 
 export type InitialSetLoad = {
@@ -203,12 +216,13 @@ export function WorkoutSessionTracker({
   }, []);
 
   const startRest = useCallback(
-    (line: TrackerLine, setIndex: number) => {
+    (line: TrackerLine, setIndex: number, roundLabel?: string) => {
       const sec = parseRestSeconds(line.prescription) ?? defaultRestSec;
+      const suffix = roundLabel ? ` · ${roundLabel}` : "";
       setRestTimer({
         endsAt: Date.now() + sec * 1000,
         totalSec: sec,
-        label: `After ${line.name} · Set ${setIndex}`,
+        label: `After ${line.name} · Set ${setIndex}${suffix}`,
         lineId: line.id,
         setIndex,
       });
@@ -216,7 +230,10 @@ export function WorkoutSessionTracker({
     [defaultRestSec]
   );
 
-  const clearRest = useCallback(() => setRestTimer(null), []);
+  const clearRest = useCallback(() => {
+    dismissRestAlerts();
+    setRestTimer(null);
+  }, []);
 
   const persistDefaultRest = useCallback((sec: number) => {
     setDefaultRestSec(sec);
@@ -318,11 +335,31 @@ export function WorkoutSessionTracker({
         };
       });
 
-      if (opts?.startRest !== false) startRest(line, setIndex);
+      if (opts?.startRest !== false) {
+        const inPair = line.pairGroupId && line.pairOrder && line.pairSize > 1;
+        const isLastInPair = inPair && line.pairOrder! >= line.pairSize;
+        if (inPair && !isLastInPair) {
+          const next = lines.find(
+            (l) =>
+              l.pairGroupId === line.pairGroupId && l.pairOrder === (line.pairOrder ?? 0) + 1
+          );
+          if (next) {
+            setActiveSet((prev) => ({ ...prev, [next.id]: setIndex }));
+          }
+        } else {
+          const roundLabel =
+            inPair && isLastInPair
+              ? line.pairType === "CIRCUIT"
+                ? "circuit round"
+                : "superset round"
+              : undefined;
+          startRest(line, setIndex, roundLabel);
+        }
+      }
       router.refresh();
       return true;
     },
-    [completed, lineById, loadDraft, router, startRest, weightUnit]
+    [completed, lineById, lines, loadDraft, router, startRest, weightUnit]
   );
 
   const uncompleteSet = useCallback(
@@ -392,6 +429,14 @@ export function WorkoutSessionTracker({
     const wLabel = weightUnit === "lbs" ? "lbs" : "kg";
     const targetReps = parseTargetReps(ex.prescription);
     const restHint = parseRestSeconds(ex.prescription) ?? defaultRestSec;
+    const inPair = ex.pairGroupId && ex.pairSize > 1;
+    const isLastInPair = inPair && ex.pairOrder === ex.pairSize;
+    const restHintText =
+      inPair && !isLastInPair
+        ? `Go to ${pairLetter((ex.pairOrder ?? 0) + 1)} — no rest yet`
+        : inPair && isLastInPair
+          ? `Rest ~${restHint}s after round`
+          : `Rest ~${restHint}s after`;
 
     if (doneForLine.has(current)) return null;
 
@@ -474,9 +519,145 @@ export function WorkoutSessionTracker({
           >
             {busy ? "Saving…" : "Complete set"}
           </button>
-          <span className="text-xs text-gymsanity-600">Rest ~{restHint}s after</span>
+          <span className="text-xs text-gymsanity-600">{restHintText}</span>
         </div>
       </div>
+    );
+  }
+
+  function renderExerciseLine(ex: TrackerLine, indexLabel: string) {
+    const maxSets = Math.min(20, Math.max(1, ex.setCount));
+    const doneForLine = completed[ex.id] ?? new Set<number>();
+    const showLoads = ex.section === "STRENGTH";
+    const current = activeSet[ex.id] ?? 1;
+    return (
+      <li key={ex.id} className="flex gap-3">
+        <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gymsanity-100 text-xs font-bold text-gymsanity-900">
+          {indexLabel}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium text-gymsanity-950">
+            {ex.name}
+            {ex.pairOrder ? (
+              <span className="ml-2 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold uppercase text-violet-900">
+                {pairLetter(ex.pairOrder)}
+              </span>
+            ) : null}
+          </p>
+          <p className="text-sm text-gymsanity-900/75">{ex.prescription}</p>
+          {ex.cues ? (
+            <p className="mt-2 border-l-2 border-gymsanity-300 pl-3 text-sm italic text-gymsanity-800/90">
+              {ex.cues}
+            </p>
+          ) : null}
+          {ex.videoUrl ? (
+            <button
+              type="button"
+              onClick={() => setDemo({ url: ex.videoUrl!, title: ex.name })}
+              className="mt-2 text-left text-sm font-semibold text-gymsanity-700 underline decoration-gymsanity-300 underline-offset-2 hover:text-gymsanity-950"
+            >
+              Watch demo clip
+            </button>
+          ) : null}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {Array.from({ length: maxSets }, (_, j) => {
+              const setNum = j + 1;
+              const isDone = doneForLine.has(setNum);
+              const isActive = !isDone && setNum === current;
+              const busy = loading === `${ex.id}-${setNum}`;
+              const savedReps = loadDraft[ex.id]?.[setNum]?.r;
+              return (
+                <button
+                  key={setNum}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    if (isDone) void uncompleteSet(ex.id, setNum);
+                    else setActiveSet((prev) => ({ ...prev, [ex.id]: setNum }));
+                  }}
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                    isDone
+                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                      : isActive
+                        ? "border-2 border-gymsanity-600 bg-gymsanity-50 text-gymsanity-950 ring-2 ring-gymsanity-200"
+                        : "border border-gymsanity-300 bg-white text-gymsanity-900 hover:border-gymsanity-500"
+                  }`}
+                >
+                  {busy
+                    ? "…"
+                    : isDone
+                      ? `Set ${setNum}${savedReps ? ` · ${savedReps}` : " ✓"}`
+                      : `Set ${setNum}`}
+                </button>
+              );
+            })}
+          </div>
+
+          {renderSetControls(ex, maxSets, doneForLine, showLoads)}
+
+          {showLoads
+            ? Array.from({ length: maxSets }, (_, j) => {
+                const setNum = j + 1;
+                if (!doneForLine.has(setNum) || setNum === current) return null;
+                const draft = loadDraft[ex.id]?.[setNum] ?? { w: "", r: "" };
+                const saveBusy = loadSaving === `load-${ex.id}-${setNum}`;
+                const wLabel = weightUnit === "lbs" ? "lbs" : "kg";
+                return (
+                  <div key={setNum} className="mt-3 flex flex-wrap items-end gap-2">
+                    <span className="text-xs font-medium text-gymsanity-700">Set {setNum}</span>
+                    <label className="flex flex-col gap-0.5">
+                      <span className="text-[10px] uppercase tracking-wide text-gymsanity-600">
+                        {wLabel}
+                      </span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        disabled={saveBusy}
+                        value={draft.w}
+                        onChange={(e) =>
+                          setLoadDraft((prev) => ({
+                            ...prev,
+                            [ex.id]: {
+                              ...prev[ex.id],
+                              [setNum]: { ...draft, w: e.target.value },
+                            },
+                          }))
+                        }
+                        onBlur={() => void commitLoad(ex.id, setNum, { startRest: false })}
+                        className="w-20 rounded-lg border border-gymsanity-200 bg-white px-2 py-1 text-sm"
+                        placeholder="—"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-0.5">
+                      <span className="text-[10px] uppercase tracking-wide text-gymsanity-600">Reps</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        disabled={saveBusy}
+                        value={draft.r}
+                        onChange={(e) =>
+                          setLoadDraft((prev) => ({
+                            ...prev,
+                            [ex.id]: {
+                              ...prev[ex.id],
+                              [setNum]: { ...draft, r: e.target.value },
+                            },
+                          }))
+                        }
+                        onBlur={() => void commitLoad(ex.id, setNum, { startRest: false })}
+                        className="w-16 rounded-lg border border-gymsanity-200 bg-white px-2 py-1 text-sm"
+                        placeholder="—"
+                      />
+                    </label>
+                    {saveBusy ? (
+                      <span className="text-xs text-gymsanity-600">Saving…</span>
+                    ) : null}
+                  </div>
+                );
+              })
+            : null}
+        </div>
+      </li>
     );
   }
 
@@ -488,131 +669,29 @@ export function WorkoutSessionTracker({
           {title}
         </h3>
         <ol className="space-y-6">
-          {blockLines.map((ex, i) => {
-            const maxSets = Math.min(20, Math.max(1, ex.setCount));
-            const doneForLine = completed[ex.id] ?? new Set<number>();
-            const showLoads = ex.section === "STRENGTH";
-            const current = activeSet[ex.id] ?? 1;
+          {groupLinesForDisplay(blockLines).map((block, blockIdx) => {
+            if (block.kind === "single") {
+              return renderExerciseLine(block.line, String(blockIdx + 1));
+            }
             return (
-              <li key={ex.id} className="flex gap-3">
-                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gymsanity-100 text-xs font-bold text-gymsanity-900">
-                  {i + 1}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-gymsanity-950">{ex.name}</p>
-                  <p className="text-sm text-gymsanity-900/75">{ex.prescription}</p>
-                  {ex.cues ? (
-                    <p className="mt-2 border-l-2 border-gymsanity-300 pl-3 text-sm italic text-gymsanity-800/90">
-                      {ex.cues}
-                    </p>
-                  ) : null}
-                  {ex.videoUrl ? (
-                    <button
-                      type="button"
-                      onClick={() => setDemo({ url: ex.videoUrl!, title: ex.name })}
-                      className="mt-2 text-left text-sm font-semibold text-gymsanity-700 underline decoration-gymsanity-300 underline-offset-2 hover:text-gymsanity-950"
-                    >
-                      Watch demo clip
-                    </button>
-                  ) : null}
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {Array.from({ length: maxSets }, (_, j) => {
-                      const setNum = j + 1;
-                      const isDone = doneForLine.has(setNum);
-                      const isActive = !isDone && setNum === current;
-                      const busy = loading === `${ex.id}-${setNum}`;
-                      const savedReps = loadDraft[ex.id]?.[setNum]?.r;
-                      return (
-                        <button
-                          key={setNum}
-                          type="button"
-                          disabled={busy}
-                          onClick={() => {
-                            if (isDone) void uncompleteSet(ex.id, setNum);
-                            else setActiveSet((prev) => ({ ...prev, [ex.id]: setNum }));
-                          }}
-                          className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
-                            isDone
-                              ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                              : isActive
-                                ? "border-2 border-gymsanity-600 bg-gymsanity-50 text-gymsanity-950 ring-2 ring-gymsanity-200"
-                                : "border border-gymsanity-300 bg-white text-gymsanity-900 hover:border-gymsanity-500"
-                          }`}
-                        >
-                          {busy
-                            ? "…"
-                            : isDone
-                              ? `Set ${setNum}${savedReps ? ` · ${savedReps}` : " ✓"}`
-                              : `Set ${setNum}`}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {renderSetControls(ex, maxSets, doneForLine, showLoads)}
-
-                  {showLoads
-                    ? Array.from({ length: maxSets }, (_, j) => {
-                        const setNum = j + 1;
-                        if (!doneForLine.has(setNum) || setNum === current) return null;
-                        const draft = loadDraft[ex.id]?.[setNum] ?? { w: "", r: "" };
-                        const saveBusy = loadSaving === `load-${ex.id}-${setNum}`;
-                        const wLabel = weightUnit === "lbs" ? "lbs" : "kg";
-                        return (
-                          <div key={setNum} className="mt-3 flex flex-wrap items-end gap-2">
-                            <span className="text-xs font-medium text-gymsanity-700">Set {setNum}</span>
-                            <label className="flex flex-col gap-0.5">
-                              <span className="text-[10px] uppercase tracking-wide text-gymsanity-600">
-                                {wLabel}
-                              </span>
-                              <input
-                                type="text"
-                                inputMode="decimal"
-                                disabled={saveBusy}
-                                value={draft.w}
-                                onChange={(e) =>
-                                  setLoadDraft((prev) => ({
-                                    ...prev,
-                                    [ex.id]: {
-                                      ...prev[ex.id],
-                                      [setNum]: { ...draft, w: e.target.value },
-                                    },
-                                  }))
-                                }
-                                onBlur={() => void commitLoad(ex.id, setNum, { startRest: false })}
-                                className="w-20 rounded-lg border border-gymsanity-200 bg-white px-2 py-1 text-sm"
-                                placeholder="—"
-                              />
-                            </label>
-                            <label className="flex flex-col gap-0.5">
-                              <span className="text-[10px] uppercase tracking-wide text-gymsanity-600">Reps</span>
-                              <input
-                                type="text"
-                                inputMode="numeric"
-                                disabled={saveBusy}
-                                value={draft.r}
-                                onChange={(e) =>
-                                  setLoadDraft((prev) => ({
-                                    ...prev,
-                                    [ex.id]: {
-                                      ...prev[ex.id],
-                                      [setNum]: { ...draft, r: e.target.value },
-                                    },
-                                  }))
-                                }
-                                onBlur={() => void commitLoad(ex.id, setNum, { startRest: false })}
-                                className="w-16 rounded-lg border border-gymsanity-200 bg-white px-2 py-1 text-sm"
-                                placeholder="—"
-                              />
-                            </label>
-                            {saveBusy ? (
-                              <span className="text-xs text-gymsanity-600">Saving…</span>
-                            ) : null}
-                          </div>
-                        );
-                      })
-                    : null}
+              <li
+                key={block.groupId}
+                className="list-none rounded-2xl border-2 border-dashed border-violet-200 bg-violet-50/30 p-4"
+              >
+                <div className="mb-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-violet-900">
+                    {pairTypeLabel(block.pairType)} ·{" "}
+                    {block.lines.map((l) => pairLetter(l.pairOrder)).join(" → ")}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-violet-900/80">
+                    {pairFlowHint(block.pairType, block.lines.length)}
+                  </p>
                 </div>
+                <ol className="space-y-6">
+                  {block.lines.map((ex) =>
+                    renderExerciseLine(ex, `${blockIdx + 1}${pairLetter(ex.pairOrder)}`)
+                  )}
+                </ol>
               </li>
             );
           })}
@@ -633,12 +712,13 @@ export function WorkoutSessionTracker({
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gymsanity-200 bg-white px-4 py-3">
           <p className="text-sm text-gymsanity-800">
             Use the rep counter during each set. A{" "}
-            <span className="font-medium text-gymsanity-950">recovery countdown</span> starts automatically
-            when you complete a set. Log strength loads in{" "}
+            <span className="font-medium text-gymsanity-950">rest timer</span> starts automatically when you
+            complete a set — chime when it ends. Log strength loads in{" "}
             <span className="font-medium text-gymsanity-950">kg</span> or{" "}
             <span className="font-medium text-gymsanity-950">lbs</span>.
           </p>
           <div className="flex flex-wrap items-center gap-3">
+            <RestAlertsControl />
             <label className="flex items-center gap-2 text-sm font-medium text-gymsanity-900">
               Default rest
               <select
@@ -669,22 +749,25 @@ export function WorkoutSessionTracker({
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gymsanity-200 bg-white px-4 py-3">
           <p className="text-sm text-gymsanity-800">
             Count reps with +/− during each set. A{" "}
-            <span className="font-medium text-gymsanity-950">recovery countdown</span> starts when you tap{" "}
-            <span className="font-medium text-gymsanity-950">Complete set</span>.
+            <span className="font-medium text-gymsanity-950">rest timer</span> starts automatically when you
+            tap <span className="font-medium text-gymsanity-950">Complete set</span> — chime when it ends.
           </p>
-          <label className="flex items-center gap-2 text-sm font-medium text-gymsanity-900">
-            Default rest
-            <select
-              value={defaultRestSec}
-              onChange={(e) => persistDefaultRest(Number(e.target.value))}
-              className="rounded-lg border border-gymsanity-200 bg-white px-3 py-2 text-gymsanity-950"
-            >
-              <option value={60}>60s</option>
-              <option value={90}>90s</option>
-              <option value={120}>2:00</option>
-              <option value={180}>3:00</option>
-            </select>
-          </label>
+          <div className="flex flex-wrap items-center gap-3">
+            <RestAlertsControl />
+            <label className="flex items-center gap-2 text-sm font-medium text-gymsanity-900">
+              Default rest
+              <select
+                value={defaultRestSec}
+                onChange={(e) => persistDefaultRest(Number(e.target.value))}
+                className="rounded-lg border border-gymsanity-200 bg-white px-3 py-2 text-gymsanity-950"
+              >
+                <option value={60}>60s</option>
+                <option value={90}>90s</option>
+                <option value={120}>2:00</option>
+                <option value={180}>3:00</option>
+              </select>
+            </label>
+          </div>
         </div>
       )}
       {renderBlock(SECTION_LABEL.MOVEMENT_PREP, prep)}

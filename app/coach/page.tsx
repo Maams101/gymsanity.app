@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BookingStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { getFocusGroupFeedbackCount } from "@/lib/focus-group";
 import { CoachCreateSlotForm } from "@/components/CoachCreateSlotForm";
 import { CoachBookingActions } from "@/components/CoachBookingActions";
 import { CoachWorkoutOfDayForm } from "@/components/coach/CoachWorkoutOfDayForm";
@@ -12,17 +13,20 @@ export default async function CoachPage() {
   const todayKey = localDateKey(now);
   const todayWod = await getCoachWorkoutOfDayForEdit(todayKey);
 
-  const bookings = await prisma.booking.findMany({
-    where: {
-      status: BookingStatus.BOOKED,
-      slot: { startAt: { gte: now } },
-    },
-    orderBy: { slot: { startAt: "asc" } },
-    include: {
-      slot: true,
-      user: { select: { name: true, email: true } },
-    },
-  });
+  const [bookings, feedbackCount] = await Promise.all([
+    prisma.booking.findMany({
+      where: {
+        status: BookingStatus.BOOKED,
+        slot: { startAt: { gte: now } },
+      },
+      orderBy: { slot: { startAt: "asc" } },
+      include: {
+        slot: true,
+        user: { select: { name: true, email: true } },
+      },
+    }),
+    getFocusGroupFeedbackCount(),
+  ]);
 
   return (
     <div className="space-y-10">
@@ -49,6 +53,21 @@ export default async function CoachPage() {
       />
 
       <CoachCreateSlotForm />
+
+      <div className="rounded-2xl border border-gymsanity-100 bg-white/90 p-6 shadow-sm">
+        <h2 className="font-display text-lg font-semibold text-gymsanity-950">Focus group feedback</h2>
+        <p className="mt-2 text-sm text-gymsanity-900/75">
+          {feedbackCount === 0
+            ? "Participants submit notes from Settings. Nothing yet."
+            : `${feedbackCount} note${feedbackCount === 1 ? "" : "s"} from focus-group members.`}
+        </p>
+        <Link
+          href="/coach/feedback"
+          className="mt-4 inline-flex rounded-full bg-gymsanity-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gymsanity-800"
+        >
+          View feedback
+        </Link>
+      </div>
 
       <div className="rounded-2xl border border-gymsanity-100 bg-white/90 p-6 shadow-sm">
         <h2 className="font-display text-lg font-semibold text-gymsanity-950">Focus group invites</h2>

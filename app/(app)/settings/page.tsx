@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { FitnessIntegrationsPanel } from "@/components/settings/FitnessIntegrationsPanel";
+import { FocusGroupFeedbackForm } from "@/components/FocusGroupFeedbackForm";
 import { NewsletterPreferenceToggle } from "@/components/NewsletterPreferenceToggle";
 import { prisma } from "@/lib/db";
+import { isFocusGroupMember } from "@/lib/focus-group";
 import { getMemberFitnessConnections } from "@/lib/fitness-connections";
 import { getSession } from "@/lib/get-session";
 import { getSubscriptionForUser } from "@/lib/newsletter";
@@ -11,7 +13,7 @@ export default async function SettingsPage() {
   const session = await getSession();
   if (!session) return null;
 
-  const [user, membership, credits, connections, newsletter] = await Promise.all([
+  const [user, membership, credits, connections, newsletter, focusGroup] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.sub },
       select: { name: true, email: true },
@@ -20,6 +22,7 @@ export default async function SettingsPage() {
     getCreditBalance(session.sub),
     getMemberFitnessConnections(session.sub),
     getSubscriptionForUser(session.sub, session.email),
+    isFocusGroupMember(session.sub),
   ]);
 
   return (
@@ -74,6 +77,8 @@ export default async function SettingsPage() {
       </section>
 
       <NewsletterPreferenceToggle initialSubscribed={Boolean(newsletter && !newsletter.unsubscribedAt)} />
+
+      {focusGroup ? <FocusGroupFeedbackForm /> : null}
 
       <FitnessIntegrationsPanel initialConnections={connections} />
 

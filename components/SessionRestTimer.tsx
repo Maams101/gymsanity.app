@@ -1,6 +1,7 @@
 "use client";
 
 import { formatCountdown, formatRestDuration } from "@/lib/workout-prescription-parse";
+import { notifyRestComplete } from "@/lib/rest-timer-notify";
 import { useRestCountdown, useRestCountdownComplete, type RestTimerState } from "@/lib/use-rest-countdown";
 
 export type { RestTimerState };
@@ -16,16 +17,6 @@ type Props = {
 
 const PRESETS = [60, 90, 120, 180] as const;
 
-function tryVibrate() {
-  try {
-    if (typeof navigator !== "undefined" && navigator.vibrate) {
-      navigator.vibrate([200, 100, 200]);
-    }
-  } catch {
-    /* ignore */
-  }
-}
-
 export function SessionRestTimer({
   timer,
   onSkip,
@@ -37,7 +28,7 @@ export function SessionRestTimer({
   const { remainingSec, isRunning, isFinished, progress } = useRestCountdown(timer);
 
   const handleComplete = () => {
-    tryVibrate();
+    notifyRestComplete(timer?.label ?? "Time for your next set.");
     onComplete();
   };
 
@@ -61,6 +52,7 @@ export function SessionRestTimer({
           <>
             <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">Rest complete</p>
             <p className="mt-2 font-display text-2xl font-semibold text-emerald-950">Next set</p>
+            <p className="mt-1 text-xs text-emerald-900/80">Sound played — start when you&apos;re ready.</p>
             <button
               type="button"
               onClick={onSkip}
@@ -161,6 +153,9 @@ export function SessionRestTimer({
             </button>
           ) : (
             <>
+              <p className="w-full text-center text-[11px] text-gymsanity-700 sm:text-left">
+                Rest timer runs between sets. You&apos;ll hear a chime when it ends.
+              </p>
               {PRESETS.map((sec) => (
                 <button
                   key={sec}
