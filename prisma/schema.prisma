@@ -84,11 +84,13 @@ model User {
   workoutOfDayAttempts  WorkoutOfDayAttempt[]
   fitnessConnections    FitnessConnection[]
   newsletterSubscriptions NewsletterSubscriber[]
+  focusGroupInviteUsed  FocusGroupInvite[]
 }
 
 enum NewsletterSource {
   SIGNUP
   HOMEPAGE
+  INVITE
 }
 
 model NewsletterSubscriber {
@@ -404,4 +406,19 @@ model CreditLedger {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+/// Single-use invite links for focus-group access (no payment required).
+model FocusGroupInvite {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  label     String    @default("Focus Group") // e.g. "Oct 2026 beta"
+  usedAt    DateTime? @map("used_at")
+  usedByUserId String? @map("used_by_user_id")
+  expiresAt DateTime? @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  usedBy User? @relation(fields: [usedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([token])
 }

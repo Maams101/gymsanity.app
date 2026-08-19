@@ -51,6 +51,19 @@ export default async function CoachPage() {
       <CoachCreateSlotForm />
 
       <div className="rounded-2xl border border-gymsanity-100 bg-white/90 p-6 shadow-sm">
+        <h2 className="font-display text-lg font-semibold text-gymsanity-950">Focus group invites</h2>
+        <p className="mt-2 text-sm text-gymsanity-900/75">
+          Generate single-use links for focus-group participants — full access, no payment required.
+        </p>
+        <Link
+          href="/coach/invites"
+          className="mt-4 inline-flex rounded-full bg-gymsanity-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gymsanity-800"
+        >
+          Manage invites
+        </Link>
+      </div>
+
+      <div className="rounded-2xl border border-gymsanity-100 bg-white/90 p-6 shadow-sm">
         <h2 className="font-display text-lg font-semibold text-gymsanity-950">Newsletter</h2>
         <p className="mt-2 text-sm text-gymsanity-900/75">
           Send training notes to everyone who joins Gymsanity — with or without an active plan.

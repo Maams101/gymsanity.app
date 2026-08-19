@@ -155,6 +155,32 @@ async function main() {
       },
     }),
     prisma.plan.upsert({
+      where: { slug: "focus-group" },
+      update: {
+        name: "Focus Group",
+        description: "Complimentary access for invited focus-group participants. No payment required.",
+        includesDigitalPrograms: true,
+        allowsGroupBooking: true,
+        allowsOneOnOneBooking: false,
+        oneOnOneCreditsPerMonth: 0,
+        sortOrder: 99,
+        billingType: PlanBillingType.SUBSCRIPTION,
+        stripePriceId: null,
+      },
+      create: {
+        slug: "focus-group",
+        name: "Focus Group",
+        description: "Complimentary access for invited focus-group participants. No payment required.",
+        includesDigitalPrograms: true,
+        allowsGroupBooking: true,
+        allowsOneOnOneBooking: false,
+        oneOnOneCreditsPerMonth: 0,
+        sortOrder: 99,
+        billingType: PlanBillingType.SUBSCRIPTION,
+        stripePriceId: null,
+      },
+    }),
+    prisma.plan.upsert({
       where: { slug: "sessions-24" },
       update: {
         name: "24 sessions",
