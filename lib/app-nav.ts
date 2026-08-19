@@ -54,7 +54,7 @@ export const COACH_NAV: NavItem[] = [
   },
   {
     href: "/coach/programs",
-    label: "Build",
+    label: "Programs",
     icon: "build",
     activePrefixes: ["/coach/programs", "/coach/exercises"],
   },

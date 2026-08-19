@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { ProgramBuilder } from "@/components/coach/ProgramBuilder";
+import { ProgrammingNav } from "@/components/coach/ProgrammingNav";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -47,7 +48,9 @@ export default async function CoachProgramEditPage({ params }: Props) {
   });
 
   return (
-    <ProgramBuilder
+    <div className="space-y-6">
+      <ProgrammingNav />
+      <ProgramBuilder
       program={{
         ...program,
         assignedMemberId: program.assignedMemberId ?? null,
@@ -60,5 +63,6 @@ export default async function CoachProgramEditPage({ params }: Props) {
       exercises={exercises}
       members={members}
     />
+    </div>
   );
 }

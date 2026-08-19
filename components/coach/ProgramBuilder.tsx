@@ -153,6 +153,30 @@ export function ProgramBuilder({
   const [addSetsError, setAddSetsError] = useState<Record<string, string | null>>({});
   const [selectedLines, setSelectedLines] = useState<Record<string, Set<string>>>({});
   const [muscleFilter, setMuscleFilter] = useState<Record<string, "" | MuscleGroup>>({});
+  const [selectedDayId, setSelectedDayId] = useState<string | null>(
+    initial.days[0]?.id ?? null
+  );
+  const [showAddDay, setShowAddDay] = useState(initial.days.length === 0);
+
+  const sortedDays = useMemo(
+    () =>
+      [...program.days].sort(
+        (a, b) => a.weekNumber - b.weekNumber || a.dayIndex - b.dayIndex
+      ),
+    [program.days]
+  );
+
+  const weeksGrouped = useMemo(() => {
+    const map = new Map<number, Day[]>();
+    for (const d of sortedDays) {
+      const list = map.get(d.weekNumber) ?? [];
+      list.push(d);
+      map.set(d.weekNumber, list);
+    }
+    return [...map.entries()].sort(([a], [b]) => a - b);
+  }, [sortedDays]);
+
+  const selectedDay = sortedDays.find((d) => d.id === selectedDayId) ?? null;
 
   const exercisesByMuscleGroup = useMemo(() => {
     const map = new Map<MuscleGroup, Ex[]>();
@@ -170,6 +194,17 @@ export function ProgramBuilder({
   useEffect(() => {
     setAssignTo(program.assignedMemberId ?? "");
   }, [program.assignedMemberId]);
+
+  useEffect(() => {
+    if (sortedDays.length === 0) {
+      setSelectedDayId(null);
+      setShowAddDay(true);
+      return;
+    }
+    if (!selectedDayId || !sortedDays.some((d) => d.id === selectedDayId)) {
+      setSelectedDayId(sortedDays[0].id);
+    }
+  }, [sortedDays, selectedDayId]);
 
   async function refresh() {
     const res = await fetch(`/api/coach/programs/${program.id}`);
@@ -195,8 +230,11 @@ export function ProgramBuilder({
     });
     setBusy(false);
     if (!res.ok) return;
+    const data = await res.json();
     setDayTitle("");
     setFocus("");
+    setShowAddDay(false);
+    if (data.day?.id) setSelectedDayId(data.day.id);
     await refresh();
   }
 
@@ -443,7 +481,10 @@ export function ProgramBuilder({
 
   async function deleteDay(dayId: string) {
     if (!confirm("Delete this whole session day?")) return;
+    const idx = sortedDays.findIndex((d) => d.id === dayId);
     await fetch(`/api/coach/program-days/${dayId}`, { method: "DELETE" });
+    const next = sortedDays[idx + 1]?.id ?? sortedDays[idx - 1]?.id ?? null;
+    setSelectedDayId(next);
     await refresh();
   }
 
@@ -471,8 +512,10 @@ export function ProgramBuilder({
     await refresh();
   }
 
-  const listHref = program.assignedMemberId ? "/coach/member-programs" : "/coach/programs";
-  const listLabel = program.assignedMemberId ? "← Member programs" : "← Programs";
+  const listHref = program.assignedMemberId
+    ? "/coach/programs?scope=tailored"
+    : "/coach/programs";
+  const listLabel = "← Programs library";
 
   const publishLabel = (() => {
     if (program.assignedMemberId && program.assignedMember) {
@@ -486,6 +529,202 @@ export function ProgramBuilder({
   const visibilityDirty =
     (assignTo === "" ? null : assignTo) !== (program.assignedMemberId ?? null);
 
+  function renderSectionBlocks(
+    dayId: string,
+    section: "MOVEMENT_PREP" | "STRENGTH",
+    lines: Line[],
+    sectionLabel: string
+  ) {
+    const sectionLines = lines.filter((l) => l.section === section);
+    if (sectionLines.length === 0) {
+      return (
+        <p className="rounded-xl border border-dashed border-gymsanity-100 bg-gymsanity-50/40 px-4 py-6 text-center text-sm text-gymsanity-700">
+          No {sectionLabel.toLowerCase()} blocks yet.
+        </p>
+      );
+    }
+
+    return (
+      <ol className="space-y-3">
+        {groupLinesForDisplay(sectionLines).map((block, blockIdx) => {
+          if (block.kind === "single") {
+            return renderLineRow(dayId, block.line, String(blockIdx + 1));
+          }
+          return (
+            <li
+              key={block.groupId}
+              className="rounded-2xl border-2 border-dashed border-violet-200 bg-violet-50/40 p-3"
+            >
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-bold uppercase tracking-wide text-violet-900">
+                  {pairTypeLabel(block.pairType)} ·{" "}
+                  {block.lines.map((l) => pairLetter(l.pairOrder)).join(" → ")}
+                </p>
+                <p className="text-[11px] text-violet-900/80">
+                  {pairFlowHint(block.pairType, block.lines.length)}
+                </p>
+              </div>
+              <ol className="space-y-2">
+                {block.lines.map((ln, i) =>
+                  renderLineRow(
+                    dayId,
+                    ln,
+                    `${blockIdx + 1}${pairLetter(ln.pairOrder) || String(i + 1)}`
+                  )
+                )}
+              </ol>
+            </li>
+          );
+        })}
+      </ol>
+    );
+  }
+
+  function renderAddBlockForm(dayId: string) {
+    return (
+      <div className="mt-4 flex flex-col gap-2 rounded-xl border border-gymsanity-100 bg-gymsanity-50/80 p-4 sm:flex-row sm:flex-wrap sm:items-end">
+        <label className="text-sm font-medium text-gymsanity-900">
+          Section
+          <select
+            value={lineSection[dayId] ?? "STRENGTH"}
+            onChange={(e) =>
+              setLineSection((s) => ({
+                ...s,
+                [dayId]: e.target.value as "MOVEMENT_PREP" | "STRENGTH",
+              }))
+            }
+            className="mt-1 w-full min-w-[140px] rounded-xl border border-gymsanity-200 bg-white px-3 py-2"
+          >
+            <option value="MOVEMENT_PREP">Movement prep</option>
+            <option value="STRENGTH">Strength</option>
+          </select>
+        </label>
+        <div className="min-w-[7rem]">
+          <label className="text-sm font-medium text-gymsanity-900">
+            # Sets (member checkboxes)
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={addSetsDraft[dayId] ?? "3"}
+              onChange={(e) => {
+                setAddSetsError((s) => ({ ...s, [dayId]: null }));
+                setAddSetsDraft((s) => ({ ...s, [dayId]: e.target.value }));
+              }}
+              onBlur={() => {
+                const parsed = parseSetsWholeNumber(addSetsDraft[dayId] ?? "3");
+                if (!parsed.ok) {
+                  setAddSetsError((s) => ({ ...s, [dayId]: SETS_RANGE_MSG }));
+                  setAddSetsDraft((s) => ({ ...s, [dayId]: "3" }));
+                  return;
+                }
+                setAddSetsError((s) => ({ ...s, [dayId]: null }));
+                setAddSetsDraft((s) => ({ ...s, [dayId]: String(parsed.value) }));
+              }}
+              aria-invalid={addSetsError[dayId] ? true : undefined}
+              className={`mt-1 w-full min-w-[4rem] rounded-xl border px-3 py-2 ${
+                addSetsError[dayId]
+                  ? "border-red-400 bg-white ring-1 ring-red-200"
+                  : "border-gymsanity-200"
+              }`}
+            />
+          </label>
+          {addSetsError[dayId] && (
+            <p className="mt-1 text-xs text-red-700">{addSetsError[dayId]}</p>
+          )}
+        </div>
+        {renderExercisePicker(dayId)}
+        <label className="flex-[2] text-sm font-medium text-gymsanity-900">
+          Prescription
+          <input
+            value={linePrescription[dayId] ?? ""}
+            onChange={(e) => setLinePrescription((s) => ({ ...s, [dayId]: e.target.value }))}
+            placeholder="e.g. 3 × 8–10 · 3s down"
+            className="mt-1 w-full rounded-xl border border-gymsanity-200 px-3 py-2"
+          />
+        </label>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void addLine(dayId)}
+          className="rounded-full bg-gymsanity-800 px-4 py-2 text-sm font-semibold text-white"
+        >
+          Add block
+        </button>
+      </div>
+    );
+  }
+
+  function renderDayPanel(d: Day) {
+    return (
+      <section className="rounded-2xl border border-gymsanity-100 bg-white/90 p-6 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gymsanity-600">
+              Week {d.weekNumber} · Day {d.dayIndex}
+            </p>
+            <h3 className="font-display text-xl font-semibold text-gymsanity-950">{d.title}</h3>
+            {d.focusNote && <p className="text-sm text-gymsanity-800/80">{d.focusNote}</p>}
+          </div>
+          <button
+            type="button"
+            onClick={() => void deleteDay(d.id)}
+            className="text-sm font-semibold text-red-700"
+          >
+            Delete session
+          </button>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gymsanity-50 pt-4">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gymsanity-600">
+            Pair selected
+          </span>
+          <button
+            type="button"
+            disabled={busy || (selectedLines[d.id]?.size ?? 0) < 2}
+            onClick={() => void pairSelected(d.id, "SUPERSET")}
+            className="rounded-full border border-gymsanity-200 bg-white px-3 py-1.5 text-xs font-semibold text-gymsanity-900 hover:bg-gymsanity-50 disabled:opacity-50"
+          >
+            Superset
+          </button>
+          <button
+            type="button"
+            disabled={busy || (selectedLines[d.id]?.size ?? 0) < 2}
+            onClick={() => void pairSelected(d.id, "CIRCUIT")}
+            className="rounded-full border border-gymsanity-200 bg-white px-3 py-1.5 text-xs font-semibold text-gymsanity-900 hover:bg-gymsanity-50 disabled:opacity-50"
+          >
+            Circuit
+          </button>
+          <button
+            type="button"
+            disabled={busy || (selectedLines[d.id]?.size ?? 0) === 0}
+            onClick={() => void unpairSelected(d.id)}
+            className="rounded-full border border-red-100 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+          >
+            Unpair
+          </button>
+        </div>
+
+        <div className="mt-6 space-y-8">
+          <div>
+            <h4 className="mb-3 text-xs font-bold uppercase tracking-[0.15em] text-teal-800">
+              Movement prep
+            </h4>
+            {renderSectionBlocks(d.id, "MOVEMENT_PREP", d.exercises, "Movement prep")}
+          </div>
+          <div>
+            <h4 className="mb-3 text-xs font-bold uppercase tracking-[0.15em] text-gymsanity-800">
+              Strength
+            </h4>
+            {renderSectionBlocks(d.id, "STRENGTH", d.exercises, "Strength")}
+          </div>
+        </div>
+
+        {renderAddBlockForm(d.id)}
+      </section>
+    );
+  }
+
   return (
     <div className="space-y-10">
       <div className="flex flex-col gap-4 border-b border-gymsanity-100 pb-6 sm:flex-row sm:items-center sm:justify-between">
@@ -495,6 +734,11 @@ export function ProgramBuilder({
           </Link>
           <h1 className="mt-2 font-display text-2xl font-semibold text-gymsanity-950">{program.title}</h1>
           <p className="mt-1 text-sm text-gymsanity-900/75">{program.description}</p>
+          <p className="mt-2 text-xs font-medium text-gymsanity-700">
+            {program.weeks} week{program.weeks === 1 ? "" : "s"} · {sortedDays.length} session
+            {sortedDays.length === 1 ? "" : "s"}
+            {program.published ? " · Live" : " · Draft"}
+          </p>
         </div>
         <button
           type="button"
@@ -546,212 +790,152 @@ export function ProgramBuilder({
         </div>
       )}
 
-      <form
-        onSubmit={addDay}
-        className="rounded-2xl border border-dashed border-gymsanity-200 bg-gymsanity-50/50 p-6"
-      >
-        <h2 className="font-display text-lg font-semibold text-gymsanity-950">Add session day</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <label className="text-sm font-medium text-gymsanity-900">
-            Week
-            <input
-              type="number"
-              min={1}
-              value={week}
-              onChange={(e) => setWeek(Number(e.target.value))}
-              className="mt-1 w-full rounded-xl border border-gymsanity-200 px-3 py-2"
-            />
-          </label>
-          <label className="text-sm font-medium text-gymsanity-900">
-            Day #
-            <input
-              type="number"
-              min={1}
-              value={dayIdx}
-              onChange={(e) => setDayIdx(Number(e.target.value))}
-              className="mt-1 w-full rounded-xl border border-gymsanity-200 px-3 py-2"
-            />
-          </label>
-          <label className="text-sm font-medium text-gymsanity-900 sm:col-span-1">
-            Title *
-            <input
-              required
-              value={dayTitle}
-              onChange={(e) => setDayTitle(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-gymsanity-200 px-3 py-2"
-            />
-          </label>
-        </div>
-        <label className="mt-3 block text-sm font-medium text-gymsanity-900">
-          Focus note
-          <input
-            value={focus}
-            onChange={(e) => setFocus(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-gymsanity-200 px-3 py-2"
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={busy}
-          className="mt-4 rounded-full bg-gymsanity-700 px-4 py-2 text-sm font-semibold text-white"
-        >
-          Add day
-        </button>
-      </form>
-
-      <div className="space-y-8">
-        {program.days.map((d) => (
-          <section
-            key={d.id}
-            className="rounded-2xl border border-gymsanity-100 bg-white/90 p-6 shadow-sm"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gymsanity-600">
-                  Week {d.weekNumber} · Day {d.dayIndex}
-                </p>
-                <h3 className="font-display text-xl font-semibold text-gymsanity-950">{d.title}</h3>
-                {d.focusNote && <p className="text-sm text-gymsanity-800/80">{d.focusNote}</p>}
-              </div>
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+        <aside className="w-full shrink-0 lg:sticky lg:top-4 lg:w-72">
+          <div className="rounded-2xl border border-gymsanity-100 bg-white/90 p-4 shadow-sm">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-gymsanity-800">
+                Sessions
+              </h2>
               <button
                 type="button"
-                onClick={() => void deleteDay(d.id)}
-                className="text-sm font-semibold text-red-700"
+                onClick={() => setShowAddDay((v) => !v)}
+                className="text-xs font-semibold text-gymsanity-800 hover:underline"
               >
-                Delete day
+                {showAddDay ? "Cancel" : "+ Add"}
               </button>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gymsanity-50 pt-4">
-              <span className="text-xs font-semibold uppercase tracking-wide text-gymsanity-600">
-                Pair selected
-              </span>
-              <button
-                type="button"
-                disabled={busy || (selectedLines[d.id]?.size ?? 0) < 2}
-                onClick={() => void pairSelected(d.id, "SUPERSET")}
-                className="rounded-full border border-gymsanity-200 bg-white px-3 py-1.5 text-xs font-semibold text-gymsanity-900 hover:bg-gymsanity-50 disabled:opacity-50"
-              >
-                Superset
-              </button>
-              <button
-                type="button"
-                disabled={busy || (selectedLines[d.id]?.size ?? 0) < 2}
-                onClick={() => void pairSelected(d.id, "CIRCUIT")}
-                className="rounded-full border border-gymsanity-200 bg-white px-3 py-1.5 text-xs font-semibold text-gymsanity-900 hover:bg-gymsanity-50 disabled:opacity-50"
-              >
-                Circuit
-              </button>
-              <button
-                type="button"
-                disabled={busy || (selectedLines[d.id]?.size ?? 0) === 0}
-                onClick={() => void unpairSelected(d.id)}
-                className="rounded-full border border-red-100 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
-              >
-                Unpair
-              </button>
-            </div>
-
-            <ol className="mt-3 space-y-3">
-              {groupLinesForDisplay(d.exercises).map((block, blockIdx) => {
-                if (block.kind === "single") {
-                  return renderLineRow(d.id, block.line, String(blockIdx + 1));
-                }
-                return (
-                  <li
-                    key={block.groupId}
-                    className="rounded-2xl border-2 border-dashed border-violet-200 bg-violet-50/40 p-3"
-                  >
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-xs font-bold uppercase tracking-wide text-violet-900">
-                        {pairTypeLabel(block.pairType)} · {block.lines.map((l) => pairLetter(l.pairOrder)).join(" → ")}
-                      </p>
-                      <p className="text-[11px] text-violet-900/80">
-                        {pairFlowHint(block.pairType, block.lines.length)}
-                      </p>
-                    </div>
-                    <ol className="space-y-2">
-                      {block.lines.map((ln, i) => renderLineRow(d.id, ln, `${blockIdx + 1}${pairLetter(ln.pairOrder) || String(i + 1)}`))}
-                    </ol>
-                  </li>
-                );
-              })}
-            </ol>
-
-            <div className="mt-4 flex flex-col gap-2 rounded-xl bg-gymsanity-50/80 p-4 sm:flex-row sm:flex-wrap sm:items-end">
-              <label className="text-sm font-medium text-gymsanity-900">
-                Section
-                <select
-                  value={lineSection[d.id] ?? "STRENGTH"}
-                  onChange={(e) =>
-                    setLineSection((s) => ({
-                      ...s,
-                      [d.id]: e.target.value as "MOVEMENT_PREP" | "STRENGTH",
-                    }))
-                  }
-                  className="mt-1 w-full min-w-[140px] rounded-xl border border-gymsanity-200 bg-white px-3 py-2"
-                >
-                  <option value="MOVEMENT_PREP">Movement prep</option>
-                  <option value="STRENGTH">Strength</option>
-                </select>
-              </label>
-              <div className="min-w-[7rem]">
-                <label className="text-sm font-medium text-gymsanity-900">
-                  # Sets (member checkboxes)
+            {showAddDay && (
+              <form onSubmit={addDay} className="mt-4 space-y-3 border-b border-gymsanity-50 pb-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="text-xs font-medium text-gymsanity-900">
+                    Week
+                    <input
+                      type="number"
+                      min={1}
+                      value={week}
+                      onChange={(e) => setWeek(Number(e.target.value))}
+                      className="mt-1 w-full rounded-lg border border-gymsanity-200 px-2 py-1.5 text-sm"
+                    />
+                  </label>
+                  <label className="text-xs font-medium text-gymsanity-900">
+                    Day #
+                    <input
+                      type="number"
+                      min={1}
+                      value={dayIdx}
+                      onChange={(e) => setDayIdx(Number(e.target.value))}
+                      className="mt-1 w-full rounded-lg border border-gymsanity-200 px-2 py-1.5 text-sm"
+                    />
+                  </label>
+                </div>
+                <label className="block text-xs font-medium text-gymsanity-900">
+                  Title *
                   <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={addSetsDraft[d.id] ?? "3"}
-                    onChange={(e) => {
-                      setAddSetsError((s) => ({ ...s, [d.id]: null }));
-                      setAddSetsDraft((s) => ({ ...s, [d.id]: e.target.value }));
-                    }}
-                    onBlur={() => {
-                      const parsed = parseSetsWholeNumber(addSetsDraft[d.id] ?? "3");
-                      if (!parsed.ok) {
-                        setAddSetsError((s) => ({ ...s, [d.id]: SETS_RANGE_MSG }));
-                        setAddSetsDraft((s) => ({ ...s, [d.id]: "3" }));
-                        return;
-                      }
-                      setAddSetsError((s) => ({ ...s, [d.id]: null }));
-                      setAddSetsDraft((s) => ({ ...s, [d.id]: String(parsed.value) }));
-                    }}
-                    aria-invalid={addSetsError[d.id] ? true : undefined}
-                    className={`mt-1 w-full min-w-[4rem] rounded-xl border px-3 py-2 ${
-                      addSetsError[d.id]
-                        ? "border-red-400 bg-white ring-1 ring-red-200"
-                        : "border-gymsanity-200"
-                    }`}
+                    required
+                    value={dayTitle}
+                    onChange={(e) => setDayTitle(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gymsanity-200 px-2 py-1.5 text-sm"
                   />
                 </label>
-                {addSetsError[d.id] && (
-                  <p className="mt-1 text-xs text-red-700">{addSetsError[d.id]}</p>
-                )}
+                <label className="block text-xs font-medium text-gymsanity-900">
+                  Focus note
+                  <input
+                    value={focus}
+                    onChange={(e) => setFocus(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gymsanity-200 px-2 py-1.5 text-sm"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="w-full rounded-full bg-gymsanity-700 py-2 text-xs font-semibold text-white"
+                >
+                  Add session
+                </button>
+              </form>
+            )}
+
+            {sortedDays.length === 0 ? (
+              <p className="mt-4 text-sm text-gymsanity-700">
+                No sessions yet. Add your first week/day above.
+              </p>
+            ) : (
+              <div className="mt-4 max-h-[min(28rem,60vh)] space-y-4 overflow-y-auto pr-1">
+                {weeksGrouped.map(([weekNum, days]) => (
+                  <div key={weekNum}>
+                    <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-gymsanity-600">
+                      Week {weekNum}
+                    </p>
+                    <ul className="space-y-1">
+                      {days.map((d) => {
+                        const active = d.id === selectedDayId;
+                        const blockCount = d.exercises.length;
+                        return (
+                          <li key={d.id}>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedDayId(d.id)}
+                              className={`w-full rounded-xl px-3 py-2.5 text-left text-sm transition-colors ${
+                                active
+                                  ? "bg-gymsanity-800 text-white"
+                                  : "text-gymsanity-900 hover:bg-gymsanity-50"
+                              }`}
+                            >
+                              <span className="font-semibold">
+                                Day {d.dayIndex}
+                                {active ? "" : " · "}
+                              </span>
+                              {!active && (
+                                <span className="block truncate text-xs opacity-80">{d.title}</span>
+                              )}
+                              {active && (
+                                <span className="mt-0.5 block truncate text-xs text-white/85">
+                                  {d.title}
+                                </span>
+                              )}
+                              <span
+                                className={`mt-1 block text-[10px] ${
+                                  active ? "text-white/70" : "text-gymsanity-600"
+                                }`}
+                              >
+                                {blockCount} block{blockCount === 1 ? "" : "s"}
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ))}
               </div>
-              {renderExercisePicker(d.id)}
-              <label className="flex-[2] text-sm font-medium text-gymsanity-900">
-                Prescription
-                <input
-                  value={linePrescription[d.id] ?? ""}
-                  onChange={(e) =>
-                    setLinePrescription((s) => ({ ...s, [d.id]: e.target.value }))
-                  }
-                  placeholder="e.g. 3 × 8–10 · 3s down"
-                  className="mt-1 w-full rounded-xl border border-gymsanity-200 px-3 py-2"
-                />
-              </label>
+            )}
+          </div>
+        </aside>
+
+        <main className="min-w-0 flex-1">
+          {selectedDay ? (
+            renderDayPanel(selectedDay)
+          ) : (
+            <div className="rounded-2xl border border-dashed border-gymsanity-200 bg-gymsanity-50/40 px-6 py-16 text-center">
+              <p className="font-display text-lg font-semibold text-gymsanity-950">
+                Build your program week by week
+              </p>
+              <p className="mt-2 text-sm text-gymsanity-800">
+                Add a session from the sidebar, then stack movement prep and strength blocks from your
+                exercise library.
+              </p>
               <button
                 type="button"
-                disabled={busy}
-                onClick={() => void addLine(d.id)}
-                className="rounded-full bg-gymsanity-800 px-4 py-2 text-sm font-semibold text-white"
+                onClick={() => setShowAddDay(true)}
+                className="mt-4 rounded-full bg-gymsanity-700 px-5 py-2 text-sm font-semibold text-white"
               >
-                Add block
+                + Add first session
               </button>
             </div>
-          </section>
-        ))}
+          )}
+        </main>
       </div>
     </div>
   );
