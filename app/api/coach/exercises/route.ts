@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { coachExerciseSelect } from "@/lib/coach-exercise";
 import { requireCoach } from "@/lib/require-coach";
 import { isMuscleGroup } from "@/lib/muscle-groups";
 import { uniqueSlug } from "@/lib/slug";
@@ -21,6 +22,7 @@ export async function GET() {
 
   const exercises = await prisma.exercise.findMany({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: coachExerciseSelect,
   });
   return NextResponse.json({ exercises });
 }

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { coachExerciseSelect } from "@/lib/coach-exercise";
 import { ProgramBuilder } from "@/components/coach/ProgramBuilder";
 import { ProgrammingNav } from "@/components/coach/ProgrammingNav";
 
@@ -43,16 +44,7 @@ export default async function CoachProgramEditPage({ params }: Props) {
 
   const exercises = await prisma.exercise.findMany({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      category: true,
-      muscleGroup: true,
-      equipment: true,
-      cues: true,
-      videoUrl: true,
-      published: true,
-    },
+    select: coachExerciseSelect,
   });
 
   return (

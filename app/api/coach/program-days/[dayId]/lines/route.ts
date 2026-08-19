@@ -24,7 +24,10 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Invalid line data." }, { status: 400 });
   }
 
-  const exercise = await prisma.exercise.findUnique({ where: { id: parsed.data.exerciseId } });
+  const exercise = await prisma.exercise.findUnique({
+    where: { id: parsed.data.exerciseId },
+    select: { id: true, name: true },
+  });
   if (!exercise) return NextResponse.json({ error: "Exercise not found." }, { status: 404 });
 
   const maxOrder = await prisma.exerciseLine.aggregate({
