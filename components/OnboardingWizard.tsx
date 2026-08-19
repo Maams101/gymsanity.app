@@ -3,8 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { formatBiomarkerSummaryLine } from "@/lib/biomarker-format";
-import { MovementScreenResults } from "@/components/MovementScreenResults";
-import { OnboardingCameraAssessment } from "@/components/OnboardingCameraAssessment";
 import {
   onboardingBiomarkerFieldLabels,
   onboardingLabels,
@@ -42,7 +40,8 @@ const initial: OnboardingProfile = {
   clearedByPhysician: "not_sure",
 };
 
-const STEPS = 7;
+// FMS camera assessment suspended from onboarding (step 1 skipped). Re-enable by restoring STEPS = 7 and the step === 1 block + case 1 validation.
+const STEPS = 6;
 
 function toggle<T extends string>(arr: T[], value: T): T[] {
   return arr.includes(value) ? arr.filter((x) => x !== value) : [...arr, value];
@@ -111,18 +110,15 @@ export function OnboardingWizard() {
         if (!data.sexForMetrics) return "Select an option for calorie estimates (or Prefer not to say).";
         return null;
       case 1:
-        if (!data.cameraAssessment) return "Complete the camera movement screen (or use Re-scan if it failed).";
-        return null;
-      case 2:
         if (data.equipmentAccess.length === 0) return "Choose at least one training environment or equipment option.";
         return null;
-      case 3:
+      case 2:
         if (data.primaryGoals.length === 0) return "Select at least one goal.";
         return null;
-      case 4:
+      case 3:
         if (data.recoveryPractices.length === 0) return "Select at least one recovery or rest practice (or “None right now”).";
         return null;
-      case 5:
+      case 4:
         return null;
       default:
         return null;
@@ -455,17 +451,7 @@ export function OnboardingWizard() {
         </section>
       )}
 
-      {step === 1 &&
-        data.heightCm != null &&
-        data.weightKg != null &&
-        data.ageYears != null && (
-          <OnboardingCameraAssessment
-            cameraAssessment={data.cameraAssessment}
-            onPatch={(patch) => setData((d) => ({ ...d, ...patch }))}
-          />
-        )}
-
-      {step === 2 && (
+      {step === 1 && (
         <section className="space-y-6">
           <div>
             <h2 className="font-display text-xl font-semibold text-gymsanity-950">Training background</h2>
@@ -537,7 +523,7 @@ export function OnboardingWizard() {
         </section>
       )}
 
-      {step === 3 && (
+      {step === 2 && (
         <section className="space-y-6">
           <div>
             <h2 className="font-display text-xl font-semibold text-gymsanity-950">Goals</h2>
@@ -598,7 +584,7 @@ export function OnboardingWizard() {
         </section>
       )}
 
-      {step === 4 && (
+      {step === 3 && (
         <section className="space-y-6">
           <div>
             <h2 className="font-display text-xl font-semibold text-gymsanity-950">Habits & recovery</h2>
@@ -666,7 +652,7 @@ export function OnboardingWizard() {
         </section>
       )}
 
-      {step === 5 && (
+      {step === 4 && (
         <section className="space-y-6">
           <div>
             <h2 className="font-display text-xl font-semibold text-gymsanity-950">Health & safety</h2>
@@ -723,7 +709,7 @@ export function OnboardingWizard() {
         </section>
       )}
 
-      {step === 6 && (
+      {step === 5 && (
         <section className="space-y-4 text-sm text-gymsanity-900">
           <h2 className="font-display text-xl font-semibold text-gymsanity-950">Review</h2>
           <p className="text-gymsanity-800/85">
@@ -734,16 +720,6 @@ export function OnboardingWizard() {
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wide text-gymsanity-600">Biological markers</dt>
                 <dd>{formatBiomarkerSummaryLine(data)}</dd>
-              </div>
-            ) : null}
-            {data.cameraAssessment ? (
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-gymsanity-600">
-                  Movement screen
-                </dt>
-                <dd>
-                  <MovementScreenResults assessment={data.cameraAssessment} compact />
-                </dd>
               </div>
             ) : null}
             <div>
