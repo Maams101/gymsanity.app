@@ -3,9 +3,7 @@
 import {
   MUSCLE_GROUP_LABELS,
   MUSCLE_GROUPS_ORDER,
-  exerciseMatchesMuscleFilter,
-  formatMuscleGroupList,
-  parseMuscleGroups,
+  parseMuscleGroup,
   type MuscleGroup,
 } from "@/lib/muscle-groups";
 import { useEffect, useMemo, useState } from "react";
@@ -47,7 +45,7 @@ function ExerciseListItem({
         <p className="font-medium text-gymsanity-950">{ex.name}</p>
         <p className="text-xs text-gymsanity-600">
           <span className="font-medium text-gymsanity-800">
-            {formatMuscleGroupList(parseMuscleGroups(ex.muscleGroups, ex.muscleGroup))}
+            {MUSCLE_GROUP_LABELS[parseMuscleGroup(ex.muscleGroup)]}
           </span>
           <span className="mx-1.5 text-gymsanity-400">·</span>
           <span className="uppercase tracking-wide">{ex.category}</span>
@@ -107,9 +105,8 @@ export function CoachExerciseManager() {
     const byMuscle = new Map<MuscleGroup, ExerciseRecord[]>();
     for (const mg of MUSCLE_GROUPS_ORDER) byMuscle.set(mg, []);
     for (const ex of exercises) {
-      for (const mg of parseMuscleGroups(ex.muscleGroups, ex.muscleGroup)) {
-        byMuscle.get(mg)!.push(ex);
-      }
+      const mg = parseMuscleGroup(ex.muscleGroup);
+      byMuscle.get(mg)!.push(ex);
     }
     for (const list of byMuscle.values()) {
       list.sort((a, b) => a.name.localeCompare(b.name));
@@ -123,7 +120,7 @@ export function CoachExerciseManager() {
   const filteredExercises = useMemo(() => {
     if (!libraryMuscleFilter) return null;
     return exercises
-      .filter((ex) => exerciseMatchesMuscleFilter(ex.muscleGroups, ex.muscleGroup, libraryMuscleFilter))
+      .filter((ex) => parseMuscleGroup(ex.muscleGroup) === libraryMuscleFilter)
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [exercises, libraryMuscleFilter]);
 

@@ -194,10 +194,8 @@ model Exercise {
   name        String
   slug        String   @unique
   category    String   @default("strength")
-  /// Primary muscle / region (legacy; first entry mirrors muscleGroups[0]).
+  /// Primary muscle / region for coach library filtering (see lib/muscle-groups.ts).
   muscleGroup String   @default("full_body") @map("muscle_group")
-  /// All targeted muscle groups for library filtering (see lib/muscle-groups.ts).
-  muscleGroups String[] @default([]) @map("muscle_groups")
   equipment   String?
   cues        String   @default("")
   videoUrl    String?

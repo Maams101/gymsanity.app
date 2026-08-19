@@ -11,8 +11,7 @@ import {
 import {
   MUSCLE_GROUP_LABELS,
   MUSCLE_GROUPS_ORDER,
-  exerciseMatchesMuscleFilter,
-  parseMuscleGroups,
+  parseMuscleGroup,
   type MuscleGroup,
 } from "@/lib/muscle-groups";
 import { useRouter } from "next/navigation";
@@ -188,9 +187,8 @@ export function ProgramBuilder({
     const map = new Map<MuscleGroup, Ex[]>();
     for (const mg of MUSCLE_GROUPS_ORDER) map.set(mg, []);
     for (const ex of exercises) {
-      for (const mg of parseMuscleGroups(ex.muscleGroups, ex.muscleGroup)) {
-        map.get(mg)!.push(ex);
-      }
+      const mg = parseMuscleGroup(ex.muscleGroup);
+      map.get(mg)!.push(ex);
     }
     for (const list of map.values()) {
       list.sort((a, b) => a.name.localeCompare(b.name));
@@ -352,9 +350,7 @@ export function ProgramBuilder({
     if (!filter) {
       return [...exercises].sort((a, b) => a.name.localeCompare(b.name));
     }
-    return exercises
-      .filter((ex) => exerciseMatchesMuscleFilter(ex.muscleGroups, ex.muscleGroup, filter))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    return exercisesByMuscleGroup.get(filter) ?? [];
   }
 
   function upsertLibraryExercise(exercise: ExerciseRecord, dayId: string) {
@@ -366,7 +362,7 @@ export function ProgramBuilder({
       return next.sort((a, b) => a.name.localeCompare(b.name));
     });
     setPickExercise((s) => ({ ...s, [dayId]: exercise.id }));
-    setMuscleFilterForDay(dayId, parseMuscleGroups(exercise.muscleGroups, exercise.muscleGroup)[0]);
+    setMuscleFilterForDay(dayId, parseMuscleGroup(exercise.muscleGroup));
     setExercisePanel((s) => ({ ...s, [dayId]: undefined }));
   }
 
