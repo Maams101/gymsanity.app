@@ -48,6 +48,7 @@ export default async function CoachProgramEditPage({ params }: Props) {
       name: true,
       category: true,
       muscleGroup: true,
+      muscleGroups: true,
       equipment: true,
       cues: true,
       videoUrl: true,

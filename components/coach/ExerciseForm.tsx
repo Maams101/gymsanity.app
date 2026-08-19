@@ -3,7 +3,7 @@
 import {
   MUSCLE_GROUP_LABELS,
   MUSCLE_GROUPS_ORDER,
-  parseMuscleGroup,
+  parseMuscleGroups,
   type MuscleGroup,
 } from "@/lib/muscle-groups";
 import { useEffect, useState } from "react";
@@ -13,6 +13,7 @@ export type ExerciseRecord = {
   name: string;
   category: string;
   muscleGroup: string;
+  muscleGroups?: string[];
   equipment: string | null;
   cues: string;
   videoUrl?: string | null;
@@ -22,7 +23,7 @@ export type ExerciseRecord = {
 type FormValues = {
   name: string;
   category: string;
-  muscleGroup: MuscleGroup;
+  muscleGroups: MuscleGroup[];
   cues: string;
   equipment: string;
   videoUrl: string;
@@ -31,7 +32,7 @@ type FormValues = {
 const EMPTY: FormValues = {
   name: "",
   category: "strength",
-  muscleGroup: "full_body",
+  muscleGroups: ["full_body"],
   cues: "",
   equipment: "",
   videoUrl: "",
@@ -41,11 +42,19 @@ function valuesFromExercise(ex: ExerciseRecord): FormValues {
   return {
     name: ex.name,
     category: ex.category,
-    muscleGroup: parseMuscleGroup(ex.muscleGroup),
+    muscleGroups: parseMuscleGroups(ex.muscleGroups, ex.muscleGroup),
     cues: ex.cues,
     equipment: ex.equipment ?? "",
     videoUrl: ex.videoUrl ?? "",
   };
+}
+
+function toggleMuscleGroup(current: MuscleGroup[], mg: MuscleGroup): MuscleGroup[] {
+  if (current.includes(mg)) {
+    const next = current.filter((g) => g !== mg);
+    return next.length > 0 ? next : current;
+  }
+  return [...current, mg];
 }
 
 export function ExerciseForm({
@@ -78,13 +87,17 @@ export function ExerciseForm({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (values.muscleGroups.length === 0) {
+      setError("Select at least one muscle group.");
+      return;
+    }
     setError(null);
     setBusy(true);
 
     const payload = {
       name: values.name,
       category: values.category,
-      muscleGroup: values.muscleGroup,
+      muscleGroups: values.muscleGroups,
       cues: values.cues,
       equipment: values.equipment || undefined,
       videoUrl: values.videoUrl || undefined,
@@ -128,12 +141,13 @@ export function ExerciseForm({
             {mode === "create" ? "Add exercise" : "Edit exercise"}
           </h2>
           <p className="mt-1 text-sm text-gymsanity-800/80">
-            Movements you reuse when building programs—name, muscle group, cues, optional demo link.
+            Movements you reuse when building programs—select one or more muscle groups, add cues, optional
+            demo link.
           </p>
         </>
       )}
       {error && <p className={`text-sm text-red-700 ${compact ? "" : "mt-3"}`}>{error}</p>}
-      <div className={`grid gap-3 ${compact ? "sm:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3"} ${compact ? "" : "mt-4"}`}>
+      <div className={`grid gap-3 sm:grid-cols-2 ${compact ? "" : "mt-4"}`}>
         <label className="block text-sm font-medium text-gymsanity-900">
           Name *
           <input
@@ -158,21 +172,42 @@ export function ExerciseForm({
             <option value="recovery">Recovery</option>
           </select>
         </label>
-        <label className="block text-sm font-medium text-gymsanity-900">
-          Muscle group
-          <select
-            value={values.muscleGroup}
-            onChange={(e) => setValues((v) => ({ ...v, muscleGroup: e.target.value as MuscleGroup }))}
-            className="mt-1 w-full rounded-xl border border-gymsanity-200 bg-white px-3 py-2 text-gymsanity-950"
-          >
-            {MUSCLE_GROUPS_ORDER.map((mg) => (
-              <option key={mg} value={mg}>
-                {MUSCLE_GROUP_LABELS[mg]}
-              </option>
-            ))}
-          </select>
-        </label>
       </div>
+
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium text-gymsanity-900">
+          Muscle groups * <span className="font-normal text-gymsanity-700">(select all that apply)</span>
+        </legend>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          {MUSCLE_GROUPS_ORDER.map((mg) => {
+            const checked = values.muscleGroups.includes(mg);
+            return (
+              <label
+                key={mg}
+                className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors ${
+                  checked
+                    ? "border-gymsanity-400 bg-gymsanity-100 text-gymsanity-950"
+                    : "border-gymsanity-200 bg-white text-gymsanity-800 hover:border-gymsanity-300"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() =>
+                    setValues((v) => ({
+                      ...v,
+                      muscleGroups: toggleMuscleGroup(v.muscleGroups, mg),
+                    }))
+                  }
+                  className="rounded text-gymsanity-700"
+                />
+                {MUSCLE_GROUP_LABELS[mg]}
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+
       <label className="block text-sm font-medium text-gymsanity-900">
         Coaching cues *
         <textarea

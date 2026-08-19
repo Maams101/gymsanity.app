@@ -1,4 +1,4 @@
-/** Primary muscle / region for library filtering (one value per exercise). */
+/** Primary muscle / region for library filtering (exercises may have several). */
 export const MUSCLE_GROUPS = [
   "chest",
   "back",
@@ -65,4 +65,44 @@ export function isMuscleGroup(value: string): value is MuscleGroup {
 export function parseMuscleGroup(value: string | undefined | null): MuscleGroup {
   if (value && isMuscleGroup(value)) return value;
   return "full_body";
+}
+
+/** Normalize stored groups; falls back to legacy single `muscleGroup` when array is empty. */
+export function parseMuscleGroups(
+  muscleGroups: string[] | null | undefined,
+  legacySingle?: string | null
+): MuscleGroup[] {
+  const fromArray = (muscleGroups ?? []).filter(isMuscleGroup) as MuscleGroup[];
+  if (fromArray.length > 0) return fromArray;
+  return [parseMuscleGroup(legacySingle)];
+}
+
+export function formatMuscleGroupList(groups: MuscleGroup[]): string {
+  return groups.map((g) => MUSCLE_GROUP_LABELS[g]).join(" · ");
+}
+
+export function exerciseMatchesMuscleFilter(
+  muscleGroups: string[] | null | undefined,
+  legacySingle: string | null | undefined,
+  filter: "" | MuscleGroup
+): boolean {
+  if (!filter) return true;
+  return parseMuscleGroups(muscleGroups, legacySingle).includes(filter);
+}
+
+/** Validate API input; returns null when invalid or empty. */
+export function normalizeMuscleGroupsInput(
+  muscleGroups?: string[],
+  legacySingle?: string
+): MuscleGroup[] | null {
+  if (muscleGroups !== undefined) {
+    const valid = muscleGroups.filter(isMuscleGroup) as MuscleGroup[];
+    if (valid.length === 0) return null;
+    return valid;
+  }
+  if (legacySingle !== undefined && legacySingle !== "") {
+    if (!isMuscleGroup(legacySingle)) return null;
+    return [legacySingle];
+  }
+  return ["full_body"];
 }

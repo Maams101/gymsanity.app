@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { isMuscleGroup } from "@/lib/muscle-groups";
+import { normalizeMuscleGroupsInput } from "@/lib/muscle-groups";
 import { requireCoach } from "@/lib/require-coach";
 
 const patchSchema = z.object({
   name: z.string().min(2).optional(),
   category: z.string().optional(),
   muscleGroup: z.string().optional(),
+  muscleGroups: z.array(z.string()).min(1).optional(),
   equipment: z.string().optional().nullable(),
   cues: z.string().optional(),
   videoUrl: z.string().url().optional().nullable().or(z.literal("")),
@@ -29,8 +30,13 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   const data = parsed.data;
-  if (data.muscleGroup !== undefined && !isMuscleGroup(data.muscleGroup)) {
-    return NextResponse.json({ error: "Invalid muscle group." }, { status: 400 });
+  let groups: string[] | undefined;
+  if (data.muscleGroups !== undefined || data.muscleGroup !== undefined) {
+    const normalized = normalizeMuscleGroupsInput(data.muscleGroups, data.muscleGroup);
+    if (!normalized) {
+      return NextResponse.json({ error: "Select at least one valid muscle group." }, { status: 400 });
+    }
+    groups = normalized;
   }
 
   const exercise = await prisma.exercise.update({
@@ -38,7 +44,7 @@ export async function PATCH(request: Request, { params }: Params) {
     data: {
       ...(data.name && { name: data.name }),
       ...(data.category !== undefined && { category: data.category }),
-      ...(data.muscleGroup !== undefined && { muscleGroup: data.muscleGroup }),
+      ...(groups && { muscleGroups: groups, muscleGroup: groups[0] }),
       ...(data.equipment !== undefined && { equipment: data.equipment }),
       ...(data.cues !== undefined && { cues: data.cues }),
       ...(data.videoUrl !== undefined && {
