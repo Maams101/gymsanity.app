@@ -16,8 +16,9 @@ import {
 } from "@/lib/muscle-groups";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { ExerciseForm, type ExerciseRecord } from "@/components/coach/ExerciseForm";
 
-type Ex = { id: string; name: string; category: string; muscleGroup?: string };
+type Ex = ExerciseRecord;
 type Line = {
   id: string;
   name: string;
@@ -131,7 +132,7 @@ function LineSetCountEditor({
 
 export function ProgramBuilder({
   program: initial,
-  exercises,
+  exercises: exercisesProp,
   members = [],
 }: {
   program: Program;
@@ -140,6 +141,7 @@ export function ProgramBuilder({
 }) {
   const router = useRouter();
   const [program, setProgram] = useState(initial);
+  const [exercises, setExercises] = useState<Ex[]>(exercisesProp);
   const [assignTo, setAssignTo] = useState<string>(initial.assignedMemberId ?? "");
   const [week, setWeek] = useState(1);
   const [dayIdx, setDayIdx] = useState(1);
@@ -153,6 +155,9 @@ export function ProgramBuilder({
   const [addSetsError, setAddSetsError] = useState<Record<string, string | null>>({});
   const [selectedLines, setSelectedLines] = useState<Record<string, Set<string>>>({});
   const [muscleFilter, setMuscleFilter] = useState<Record<string, "" | MuscleGroup>>({});
+  const [exercisePanel, setExercisePanel] = useState<
+    Record<string, { mode: "create" } | { mode: "edit"; exerciseId: string } | undefined>
+  >({});
   const [selectedDayId, setSelectedDayId] = useState<string | null>(
     initial.days[0]?.id ?? null
   );
@@ -348,72 +353,148 @@ export function ProgramBuilder({
     return exercisesByMuscleGroup.get(filter) ?? [];
   }
 
+  function upsertLibraryExercise(exercise: ExerciseRecord, dayId: string) {
+    setExercises((prev) => {
+      const idx = prev.findIndex((e) => e.id === exercise.id);
+      if (idx === -1) return [...prev, exercise].sort((a, b) => a.name.localeCompare(b.name));
+      const next = [...prev];
+      next[idx] = exercise;
+      return next.sort((a, b) => a.name.localeCompare(b.name));
+    });
+    setPickExercise((s) => ({ ...s, [dayId]: exercise.id }));
+    setMuscleFilterForDay(dayId, parseMuscleGroup(exercise.muscleGroup));
+    setExercisePanel((s) => ({ ...s, [dayId]: undefined }));
+  }
+
   function renderExercisePicker(dayId: string) {
     const filter = muscleFilter[dayId] ?? "";
     const options = exercisesForDay(dayId);
+    const pickedId = pickExercise[dayId] ?? "";
+    const pickedExercise = pickedId ? exercises.find((e) => e.id === pickedId) : null;
+    const panel = exercisePanel[dayId];
 
     return (
-      <>
-        <label className="text-sm font-medium text-gymsanity-900 sm:min-w-[11rem]">
-          Target muscle
-          <select
-            value={filter}
-            onChange={(e) =>
-              setMuscleFilterForDay(dayId, (e.target.value || "") as "" | MuscleGroup)
-            }
-            className="mt-1 w-full rounded-xl border border-gymsanity-200 bg-white px-3 py-2"
-          >
-            <option value="">All groups</option>
-            {MUSCLE_GROUPS_ORDER.map((mg) => {
-              const count = exercisesByMuscleGroup.get(mg)?.length ?? 0;
-              if (count === 0) return null;
-              return (
-                <option key={mg} value={mg}>
-                  {MUSCLE_GROUP_LABELS[mg]} ({count})
-                </option>
-              );
-            })}
-          </select>
-        </label>
-        <label className="min-w-[12rem] flex-1 text-sm font-medium text-gymsanity-900">
-          Exercise
-          <select
-            value={pickExercise[dayId] ?? ""}
-            onChange={(e) => setPickExercise((s) => ({ ...s, [dayId]: e.target.value }))}
-            disabled={filter !== "" && options.length === 0}
-            className="mt-1 w-full rounded-xl border border-gymsanity-200 bg-white px-3 py-2 disabled:opacity-60"
-          >
-            <option value="">
-              {filter
-                ? options.length === 0
-                  ? "No exercises for this muscle"
-                  : `Select ${MUSCLE_GROUP_LABELS[filter].toLowerCase()} exercise…`
-                : "Select exercise…"}
-            </option>
-            {filter ? (
-              options.map((ex) => (
-                <option key={ex.id} value={ex.id}>
-                  {ex.name} · {ex.category}
-                </option>
-              ))
-            ) : (
-              MUSCLE_GROUPS_ORDER.map((mg) => {
-                const list = exercisesByMuscleGroup.get(mg) ?? [];
-                if (list.length === 0) return null;
+      <div className="w-full space-y-3 sm:col-span-full">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+          <label className="text-sm font-medium text-gymsanity-900 sm:min-w-[11rem]">
+            Target muscle
+            <select
+              value={filter}
+              onChange={(e) =>
+                setMuscleFilterForDay(dayId, (e.target.value || "") as "" | MuscleGroup)
+              }
+              className="mt-1 w-full rounded-xl border border-gymsanity-200 bg-white px-3 py-2"
+            >
+              <option value="">All groups</option>
+              {MUSCLE_GROUPS_ORDER.map((mg) => {
+                const count = exercisesByMuscleGroup.get(mg)?.length ?? 0;
+                if (count === 0) return null;
                 return (
-                  <optgroup key={mg} label={MUSCLE_GROUP_LABELS[mg]}>
-                    {list.map((ex) => (
-                      <option key={ex.id} value={ex.id}>
-                        {ex.name} · {ex.category}
-                      </option>
-                    ))}
-                  </optgroup>
+                  <option key={mg} value={mg}>
+                    {MUSCLE_GROUP_LABELS[mg]} ({count})
+                  </option>
                 );
-              })
+              })}
+            </select>
+          </label>
+          <label className="min-w-[12rem] flex-1 text-sm font-medium text-gymsanity-900">
+            Exercise
+            <select
+              value={pickedId}
+              onChange={(e) => {
+                setPickExercise((s) => ({ ...s, [dayId]: e.target.value }));
+                setExercisePanel((s) => ({ ...s, [dayId]: undefined }));
+              }}
+              disabled={filter !== "" && options.length === 0}
+              className="mt-1 w-full rounded-xl border border-gymsanity-200 bg-white px-3 py-2 disabled:opacity-60"
+            >
+              <option value="">
+                {filter
+                  ? options.length === 0
+                    ? "No exercises for this muscle"
+                    : `Select ${MUSCLE_GROUP_LABELS[filter].toLowerCase()} exercise…`
+                  : "Select exercise…"}
+              </option>
+              {filter ? (
+                options.map((ex) => (
+                  <option key={ex.id} value={ex.id}>
+                    {ex.name} · {ex.category}
+                  </option>
+                ))
+              ) : (
+                MUSCLE_GROUPS_ORDER.map((mg) => {
+                  const list = exercisesByMuscleGroup.get(mg) ?? [];
+                  if (list.length === 0) return null;
+                  return (
+                    <optgroup key={mg} label={MUSCLE_GROUP_LABELS[mg]}>
+                      {list.map((ex) => (
+                        <option key={ex.id} value={ex.id}>
+                          {ex.name} · {ex.category}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })
+              )}
+            </select>
+          </label>
+          <div className="flex flex-wrap gap-2 pb-0.5">
+            <button
+              type="button"
+              onClick={() =>
+                setExercisePanel((s) => ({
+                  ...s,
+                  [dayId]: panel?.mode === "create" ? undefined : { mode: "create" },
+                }))
+              }
+              className="rounded-full border border-gymsanity-200 bg-white px-3 py-2 text-xs font-semibold text-gymsanity-900 hover:bg-gymsanity-50"
+            >
+              {panel?.mode === "create" ? "Cancel" : "+ New exercise"}
+            </button>
+            {pickedExercise && (
+              <button
+                type="button"
+                onClick={() =>
+                  setExercisePanel((s) => ({
+                    ...s,
+                    [dayId]:
+                      panel?.mode === "edit" ? undefined : { mode: "edit", exerciseId: pickedExercise.id },
+                  }))
+                }
+                className="rounded-full border border-gymsanity-200 bg-white px-3 py-2 text-xs font-semibold text-gymsanity-900 hover:bg-gymsanity-50"
+              >
+                {panel?.mode === "edit" ? "Cancel edit" : "Edit exercise"}
+              </button>
             )}
-          </select>
-        </label>
-      </>
+          </div>
+        </div>
+
+        {panel?.mode === "create" && (
+          <div className="rounded-xl border border-gymsanity-200 bg-white p-4">
+            <ExerciseForm
+              mode="create"
+              compact
+              submitLabel="Save & select"
+              onSuccess={(exercise) => upsertLibraryExercise(exercise, dayId)}
+              onCancel={() => setExercisePanel((s) => ({ ...s, [dayId]: undefined }))}
+            />
+          </div>
+        )}
+
+        {panel?.mode === "edit" && pickedExercise && (
+          <div className="rounded-xl border border-gymsanity-200 bg-white p-4">
+            <ExerciseForm
+              mode="edit"
+              exerciseId={pickedExercise.id}
+              initial={pickedExercise}
+              compact
+              submitLabel="Save changes"
+              onSuccess={(exercise) => upsertLibraryExercise(exercise, dayId)}
+              onCancel={() => setExercisePanel((s) => ({ ...s, [dayId]: undefined }))}
+            />
+          </div>
+        )}
+      </div>
     );
   }
 

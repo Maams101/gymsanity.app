@@ -42,9 +42,17 @@ export default async function CoachProgramEditPage({ params }: Props) {
   });
 
   const exercises = await prisma.exercise.findMany({
-    where: { published: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: { id: true, name: true, category: true, muscleGroup: true },
+    select: {
+      id: true,
+      name: true,
+      category: true,
+      muscleGroup: true,
+      equipment: true,
+      cues: true,
+      videoUrl: true,
+      published: true,
+    },
   });
 
   return (
