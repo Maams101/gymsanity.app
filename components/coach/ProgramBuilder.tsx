@@ -152,6 +152,7 @@ export function ProgramBuilder({
   const [addSetsDraft, setAddSetsDraft] = useState<Record<string, string>>({});
   const [addSetsError, setAddSetsError] = useState<Record<string, string | null>>({});
   const [selectedLines, setSelectedLines] = useState<Record<string, Set<string>>>({});
+  const [muscleFilter, setMuscleFilter] = useState<Record<string, "" | MuscleGroup>>({});
 
   const exercisesByMuscleGroup = useMemo(() => {
     const map = new Map<MuscleGroup, Ex[]>();
@@ -285,6 +286,97 @@ export function ProgramBuilder({
     setBusy(false);
     setSelectedLines((s) => ({ ...s, [dayId]: new Set() }));
     await refresh();
+  }
+
+  function exercisesForDay(dayId: string): Ex[] {
+    return exercisesForDayWithFilter(muscleFilter[dayId] ?? "");
+  }
+
+  function setMuscleFilterForDay(dayId: string, value: "" | MuscleGroup) {
+    setMuscleFilter((s) => ({ ...s, [dayId]: value }));
+    setPickExercise((s) => {
+      const current = s[dayId];
+      if (!current) return s;
+      const stillValid = exercisesForDayWithFilter(value).some((ex) => ex.id === current);
+      if (stillValid) return s;
+      return { ...s, [dayId]: "" };
+    });
+  }
+
+  function exercisesForDayWithFilter(filter: "" | MuscleGroup): Ex[] {
+    if (!filter) {
+      return [...exercises].sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return exercisesByMuscleGroup.get(filter) ?? [];
+  }
+
+  function renderExercisePicker(dayId: string) {
+    const filter = muscleFilter[dayId] ?? "";
+    const options = exercisesForDay(dayId);
+
+    return (
+      <>
+        <label className="text-sm font-medium text-gymsanity-900 sm:min-w-[11rem]">
+          Target muscle
+          <select
+            value={filter}
+            onChange={(e) =>
+              setMuscleFilterForDay(dayId, (e.target.value || "") as "" | MuscleGroup)
+            }
+            className="mt-1 w-full rounded-xl border border-gymsanity-200 bg-white px-3 py-2"
+          >
+            <option value="">All groups</option>
+            {MUSCLE_GROUPS_ORDER.map((mg) => {
+              const count = exercisesByMuscleGroup.get(mg)?.length ?? 0;
+              if (count === 0) return null;
+              return (
+                <option key={mg} value={mg}>
+                  {MUSCLE_GROUP_LABELS[mg]} ({count})
+                </option>
+              );
+            })}
+          </select>
+        </label>
+        <label className="min-w-[12rem] flex-1 text-sm font-medium text-gymsanity-900">
+          Exercise
+          <select
+            value={pickExercise[dayId] ?? ""}
+            onChange={(e) => setPickExercise((s) => ({ ...s, [dayId]: e.target.value }))}
+            disabled={filter !== "" && options.length === 0}
+            className="mt-1 w-full rounded-xl border border-gymsanity-200 bg-white px-3 py-2 disabled:opacity-60"
+          >
+            <option value="">
+              {filter
+                ? options.length === 0
+                  ? "No exercises for this muscle"
+                  : `Select ${MUSCLE_GROUP_LABELS[filter].toLowerCase()} exercise…`
+                : "Select exercise…"}
+            </option>
+            {filter ? (
+              options.map((ex) => (
+                <option key={ex.id} value={ex.id}>
+                  {ex.name} · {ex.category}
+                </option>
+              ))
+            ) : (
+              MUSCLE_GROUPS_ORDER.map((mg) => {
+                const list = exercisesByMuscleGroup.get(mg) ?? [];
+                if (list.length === 0) return null;
+                return (
+                  <optgroup key={mg} label={MUSCLE_GROUP_LABELS[mg]}>
+                    {list.map((ex) => (
+                      <option key={ex.id} value={ex.id}>
+                        {ex.name} · {ex.category}
+                      </option>
+                    ))}
+                  </optgroup>
+                );
+              })
+            )}
+          </select>
+        </label>
+      </>
+    );
   }
 
   function renderLineRow(dayId: string, ln: Line, indexLabel: string) {
@@ -637,31 +729,7 @@ export function ProgramBuilder({
                   <p className="mt-1 text-xs text-red-700">{addSetsError[d.id]}</p>
                 )}
               </div>
-              <label className="flex-1 text-sm font-medium text-gymsanity-900">
-                From library
-                <select
-                  value={pickExercise[d.id] ?? ""}
-                  onChange={(e) =>
-                    setPickExercise((s) => ({ ...s, [d.id]: e.target.value }))
-                  }
-                  className="mt-1 w-full rounded-xl border border-gymsanity-200 bg-white px-3 py-2"
-                >
-                  <option value="">Select exercise…</option>
-                  {MUSCLE_GROUPS_ORDER.map((mg) => {
-                    const list = exercisesByMuscleGroup.get(mg) ?? [];
-                    if (list.length === 0) return null;
-                    return (
-                      <optgroup key={mg} label={MUSCLE_GROUP_LABELS[mg]}>
-                        {list.map((ex) => (
-                          <option key={ex.id} value={ex.id}>
-                            {ex.name} · {ex.category}
-                          </option>
-                        ))}
-                      </optgroup>
-                    );
-                  })}
-                </select>
-              </label>
+              {renderExercisePicker(d.id)}
               <label className="flex-[2] text-sm font-medium text-gymsanity-900">
                 Prescription
                 <input
