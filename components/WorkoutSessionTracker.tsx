@@ -26,7 +26,7 @@ export type TrackerLine = {
   id: string;
   name: string;
   prescription: string;
-  section: "MOVEMENT_PREP" | "STRENGTH";
+  section: "MOVEMENT_PREP" | "STRENGTH" | "COOLDOWN";
   setCount: number;
   cues: string | null;
   videoUrl: string | null;
@@ -52,6 +52,7 @@ type Props = {
 const SECTION_LABEL: Record<TrackerLine["section"], string> = {
   MOVEMENT_PREP: "Movement prep",
   STRENGTH: "Strength",
+  COOLDOWN: "Cooldown",
 };
 
 const STORAGE_KEY = "gymsanity-load-weight-unit";
@@ -420,6 +421,7 @@ export function WorkoutSessionTracker({
 
   const prep = lines.filter((l) => l.section === "MOVEMENT_PREP");
   const strength = lines.filter((l) => l.section === "STRENGTH");
+  const cooldown = lines.filter((l) => l.section === "COOLDOWN");
 
   function renderSetControls(ex: TrackerLine, maxSets: number, doneForLine: Set<number>, showLoads: boolean) {
     const current = activeSet[ex.id] ?? 1;
@@ -772,6 +774,7 @@ export function WorkoutSessionTracker({
       )}
       {renderBlock(SECTION_LABEL.MOVEMENT_PREP, prep)}
       {renderBlock(SECTION_LABEL.STRENGTH, strength)}
+      {renderBlock(SECTION_LABEL.COOLDOWN, cooldown)}
 
       <SessionRestTimer
         timer={restTimer}

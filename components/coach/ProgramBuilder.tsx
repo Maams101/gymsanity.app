@@ -24,7 +24,7 @@ type Line = {
   name: string;
   prescription: string;
   exerciseId: string | null;
-  section: "MOVEMENT_PREP" | "STRENGTH";
+  section: "MOVEMENT_PREP" | "STRENGTH" | "COOLDOWN";
   setCount: number;
   pairGroupId: string | null;
   pairType: ExercisePairType | null;
@@ -150,7 +150,9 @@ export function ProgramBuilder({
   const [busy, setBusy] = useState(false);
   const [linePrescription, setLinePrescription] = useState<Record<string, string>>({});
   const [pickExercise, setPickExercise] = useState<Record<string, string>>({});
-  const [lineSection, setLineSection] = useState<Record<string, "MOVEMENT_PREP" | "STRENGTH">>({});
+  const [lineSection, setLineSection] = useState<
+    Record<string, "MOVEMENT_PREP" | "STRENGTH" | "COOLDOWN">
+  >({});
   const [addSetsDraft, setAddSetsDraft] = useState<Record<string, string>>({});
   const [addSetsError, setAddSetsError] = useState<Record<string, string | null>>({});
   const [selectedLines, setSelectedLines] = useState<Record<string, Set<string>>>({});
@@ -270,7 +272,7 @@ export function ProgramBuilder({
 
   async function patchLine(
     id: string,
-    patch: Partial<{ section: "MOVEMENT_PREP" | "STRENGTH"; setCount: number }>
+    patch: Partial<{ section: "MOVEMENT_PREP" | "STRENGTH" | "COOLDOWN"; setCount: number }>
   ) {
     setBusy(true);
     await fetch(`/api/coach/exercise-lines/${id}`, {
@@ -533,13 +535,14 @@ export function ProgramBuilder({
               disabled={busy}
               onChange={(e) =>
                 void patchLine(ln.id, {
-                  section: e.target.value as "MOVEMENT_PREP" | "STRENGTH",
+                  section: e.target.value as "MOVEMENT_PREP" | "STRENGTH" | "COOLDOWN",
                 })
               }
               className="rounded-lg border border-gymsanity-200 bg-white px-2 py-1 text-xs"
             >
               <option value="MOVEMENT_PREP">Movement prep</option>
               <option value="STRENGTH">Strength</option>
+              <option value="COOLDOWN">Cooldown</option>
             </select>
           </label>
           <LineSetCountEditor
@@ -612,7 +615,7 @@ export function ProgramBuilder({
 
   function renderSectionBlocks(
     dayId: string,
-    section: "MOVEMENT_PREP" | "STRENGTH",
+    section: "MOVEMENT_PREP" | "STRENGTH" | "COOLDOWN",
     lines: Line[],
     sectionLabel: string
   ) {
@@ -671,13 +674,14 @@ export function ProgramBuilder({
             onChange={(e) =>
               setLineSection((s) => ({
                 ...s,
-                [dayId]: e.target.value as "MOVEMENT_PREP" | "STRENGTH",
+                [dayId]: e.target.value as "MOVEMENT_PREP" | "STRENGTH" | "COOLDOWN",
               }))
             }
             className="mt-1 w-full min-w-[140px] rounded-xl border border-gymsanity-200 bg-white px-3 py-2"
           >
             <option value="MOVEMENT_PREP">Movement prep</option>
             <option value="STRENGTH">Strength</option>
+            <option value="COOLDOWN">Cooldown</option>
           </select>
         </label>
         <div className="min-w-[7rem]">
@@ -798,6 +802,12 @@ export function ProgramBuilder({
               Strength
             </h4>
             {renderSectionBlocks(d.id, "STRENGTH", d.exercises, "Strength")}
+          </div>
+          <div>
+            <h4 className="mb-3 text-xs font-bold uppercase tracking-[0.15em] text-sky-800">
+              Cooldown
+            </h4>
+            {renderSectionBlocks(d.id, "COOLDOWN", d.exercises, "Cooldown")}
           </div>
         </div>
 
