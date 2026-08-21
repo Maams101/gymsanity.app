@@ -164,6 +164,9 @@ export function ProgramBuilder({
     initial.days[0]?.id ?? null
   );
   const [showAddDay, setShowAddDay] = useState(initial.days.length === 0);
+  const [editTitle, setEditTitle] = useState(initial.title);
+  const [editDescription, setEditDescription] = useState(initial.description);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
 
   const sortedDays = useMemo(
     () =>
@@ -201,6 +204,11 @@ export function ProgramBuilder({
   useEffect(() => {
     setAssignTo(program.assignedMemberId ?? "");
   }, [program.assignedMemberId]);
+
+  useEffect(() => {
+    setEditTitle(program.title);
+    setEditDescription(program.description);
+  }, [program.title, program.description]);
 
   useEffect(() => {
     if (sortedDays.length === 0) {
@@ -583,6 +591,50 @@ export function ProgramBuilder({
     await refresh();
   }
 
+  async function saveDetails() {
+    const title = editTitle.trim();
+    const description = editDescription.trim();
+    if (title.length < 2) {
+      setDetailsError("Title needs at least 2 characters.");
+      return;
+    }
+    if (description.length < 2) {
+      setDetailsError("Description needs at least 2 characters.");
+      return;
+    }
+    if (title === program.title && description === program.description) return;
+    setDetailsError(null);
+    setBusy(true);
+    const res = await fetch(`/api/coach/programs/${program.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, description }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setDetailsError("Could not save. Try again.");
+      return;
+    }
+    await refresh();
+  }
+
+  async function deleteProgram() {
+    const label = program.published ? "published program" : "draft";
+    if (
+      !confirm(
+        `Delete this ${label} “${program.title}”? All sessions and exercise blocks will be removed. This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    const res = await fetch(`/api/coach/programs/${program.id}`, { method: "DELETE" });
+    setBusy(false);
+    if (!res.ok) return;
+    router.push(listHref);
+    router.refresh();
+  }
+
   async function saveVisibility() {
     const next = assignTo === "" ? null : assignTo;
     if (next === program.assignedMemberId) return;
@@ -612,6 +664,9 @@ export function ProgramBuilder({
 
   const visibilityDirty =
     (assignTo === "" ? null : assignTo) !== (program.assignedMemberId ?? null);
+
+  const detailsDirty =
+    editTitle.trim() !== program.title || editDescription.trim() !== program.description;
 
   function renderSectionBlocks(
     dayId: string,
@@ -818,27 +873,79 @@ export function ProgramBuilder({
 
   return (
     <div className="space-y-10">
-      <div className="flex flex-col gap-4 border-b border-gymsanity-100 pb-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <Link href={listHref} className="text-sm font-semibold text-gymsanity-800 hover:underline">
-            {listLabel}
-          </Link>
-          <h1 className="mt-2 font-display text-2xl font-semibold text-gymsanity-950">{program.title}</h1>
-          <p className="mt-1 text-sm text-gymsanity-900/75">{program.description}</p>
-          <p className="mt-2 text-xs font-medium text-gymsanity-700">
-            {program.weeks} week{program.weeks === 1 ? "" : "s"} · {sortedDays.length} session
-            {sortedDays.length === 1 ? "" : "s"}
-            {program.published ? " · Live" : " · Draft"}
-          </p>
+      <div className="flex flex-col gap-4 border-b border-gymsanity-100 pb-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <Link href={listHref} className="text-sm font-semibold text-gymsanity-800 hover:underline">
+              {listLabel}
+            </Link>
+            <p className="mt-2 text-xs font-medium text-gymsanity-700">
+              {program.weeks} week{program.weeks === 1 ? "" : "s"} · {sortedDays.length} session
+              {sortedDays.length === 1 ? "" : "s"}
+              {program.published ? " · Live" : " · Draft"}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void togglePublish()}
+              className="rounded-full border border-gymsanity-200 bg-white px-4 py-2 text-sm font-semibold text-gymsanity-900 hover:bg-gymsanity-50"
+            >
+              {publishLabel}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void deleteProgram()}
+              className="rounded-full border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
+            >
+              Delete program
+            </button>
+          </div>
         </div>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void togglePublish()}
-          className="rounded-full border border-gymsanity-200 bg-white px-4 py-2 text-sm font-semibold text-gymsanity-900 hover:bg-gymsanity-50"
-        >
-          {publishLabel}
-        </button>
+
+        <div className="rounded-2xl border border-gymsanity-100 bg-white/90 p-4 shadow-sm">
+          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-gymsanity-800">
+            Program details
+          </h2>
+          {detailsError && <p className="mt-2 text-sm text-red-700">{detailsError}</p>}
+          <div className="mt-3 grid gap-3">
+            <label className="block text-sm font-medium text-gymsanity-900">
+              Name *
+              <input
+                value={editTitle}
+                onChange={(e) => {
+                  setDetailsError(null);
+                  setEditTitle(e.target.value);
+                }}
+                disabled={busy}
+                className="mt-1 w-full rounded-xl border border-gymsanity-200 px-3 py-2 font-display text-lg font-semibold text-gymsanity-950"
+              />
+            </label>
+            <label className="block text-sm font-medium text-gymsanity-900">
+              Description *
+              <textarea
+                value={editDescription}
+                onChange={(e) => {
+                  setDetailsError(null);
+                  setEditDescription(e.target.value);
+                }}
+                disabled={busy}
+                rows={2}
+                className="mt-1 w-full rounded-xl border border-gymsanity-200 px-3 py-2 text-sm text-gymsanity-950"
+              />
+            </label>
+          </div>
+          <button
+            type="button"
+            disabled={busy || !detailsDirty}
+            onClick={() => void saveDetails()}
+            className="mt-3 rounded-full bg-gymsanity-800 px-4 py-2 text-sm font-semibold text-white hover:bg-gymsanity-900 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Save name & description
+          </button>
+        </div>
       </div>
 
       {program.assignedMemberId && program.assignedMember ? (
