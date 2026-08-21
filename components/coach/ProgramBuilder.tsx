@@ -19,12 +19,13 @@ import { useEffect, useMemo, useState } from "react";
 import { ExerciseForm, type ExerciseRecord } from "@/components/coach/ExerciseForm";
 
 type Ex = ExerciseRecord;
+type LineSection = "MOVEMENT_PREP" | "STRENGTH" | "COOLDOWN";
 type Line = {
   id: string;
   name: string;
   prescription: string;
   exerciseId: string | null;
-  section: "MOVEMENT_PREP" | "STRENGTH" | "COOLDOWN";
+  section: LineSection;
   setCount: number;
   pairGroupId: string | null;
   pairType: ExercisePairType | null;
@@ -54,6 +55,101 @@ type MemberOption = { id: string; name: string; email: string };
 const MIN_SETS = 1;
 const MAX_SETS = 20;
 const SETS_RANGE_MSG = `Whole number from ${MIN_SETS} to ${MAX_SETS}.`;
+
+const SECTION_KEYS: LineSection[] = ["MOVEMENT_PREP", "STRENGTH", "COOLDOWN"];
+
+type DragBlockPayload = {
+  dayId: string;
+  fromSection: LineSection;
+  blockKey: string;
+  lineIds: string[];
+};
+
+const DRAG_MIME = "application/x-gymsanity-block";
+
+function blockKeyFromDisplay(
+  block: ReturnType<typeof groupLinesForDisplay<Line>>[number]
+): string {
+  return block.kind === "single" ? `line:${block.line.id}` : `group:${block.groupId}`;
+}
+
+function lineIdsFromDisplay(
+  block: ReturnType<typeof groupLinesForDisplay<Line>>[number]
+): string[] {
+  return block.kind === "single" ? [block.line.id] : block.lines.map((l) => l.id);
+}
+
+function sectionsLayoutFromLines(lines: Line[]): Record<LineSection, string[]> {
+  const layout: Record<LineSection, string[]> = {
+    MOVEMENT_PREP: [],
+    STRENGTH: [],
+    COOLDOWN: [],
+  };
+  for (const section of SECTION_KEYS) {
+    const sectionLines = lines.filter((l) => l.section === section);
+    for (const block of groupLinesForDisplay(sectionLines)) {
+      layout[section].push(...lineIdsFromDisplay(block));
+    }
+  }
+  return layout;
+}
+
+/** Move a display block (single or pair group) within/across sections. `toBlockIndex` is the
+ *  insertion index in the target section's block list *after* the source block is removed. */
+function moveBlockInLayout(
+  dayLines: Line[],
+  fromSection: LineSection,
+  toSection: LineSection,
+  lineIds: string[],
+  toBlockIndex: number
+): Record<LineSection, string[]> {
+  const movingSet = new Set(lineIds);
+  const blocksBySection: Record<
+    LineSection,
+    ReturnType<typeof groupLinesForDisplay<Line>>
+  > = {
+    MOVEMENT_PREP: groupLinesForDisplay(dayLines.filter((l) => l.section === "MOVEMENT_PREP")),
+    STRENGTH: groupLinesForDisplay(dayLines.filter((l) => l.section === "STRENGTH")),
+    COOLDOWN: groupLinesForDisplay(dayLines.filter((l) => l.section === "COOLDOWN")),
+  };
+
+  const fromBlocks = blocksBySection[fromSection];
+  const fromIdx = fromBlocks.findIndex((b) =>
+    lineIdsFromDisplay(b).some((id) => movingSet.has(id))
+  );
+  if (fromIdx < 0) return sectionsLayoutFromLines(dayLines);
+
+  const [moved] = fromBlocks.splice(fromIdx, 1);
+  if (!moved) return sectionsLayoutFromLines(dayLines);
+
+  const insertAt = Math.max(0, Math.min(toBlockIndex, blocksBySection[toSection].length));
+  blocksBySection[toSection].splice(insertAt, 0, moved);
+
+  return {
+    MOVEMENT_PREP: blocksBySection.MOVEMENT_PREP.flatMap(lineIdsFromDisplay),
+    STRENGTH: blocksBySection.STRENGTH.flatMap(lineIdsFromDisplay),
+    COOLDOWN: blocksBySection.COOLDOWN.flatMap(lineIdsFromDisplay),
+  };
+}
+
+function DragHandle({ label }: { label: string }) {
+  return (
+    <span
+      className="mt-0.5 inline-flex cursor-grab touch-none select-none items-center rounded-md border border-gymsanity-200 bg-white px-1.5 py-1 text-gymsanity-500 active:cursor-grabbing"
+      title={label}
+      aria-hidden
+    >
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+        <circle cx="3" cy="2.5" r="1.1" />
+        <circle cx="9" cy="2.5" r="1.1" />
+        <circle cx="3" cy="6" r="1.1" />
+        <circle cx="9" cy="6" r="1.1" />
+        <circle cx="3" cy="9.5" r="1.1" />
+        <circle cx="9" cy="9.5" r="1.1" />
+      </svg>
+    </span>
+  );
+}
 
 function parseSetsWholeNumber(raw: string): { ok: true; value: number } | { ok: false } {
   const t = raw.trim();
@@ -150,9 +246,7 @@ export function ProgramBuilder({
   const [busy, setBusy] = useState(false);
   const [linePrescription, setLinePrescription] = useState<Record<string, string>>({});
   const [pickExercise, setPickExercise] = useState<Record<string, string>>({});
-  const [lineSection, setLineSection] = useState<
-    Record<string, "MOVEMENT_PREP" | "STRENGTH" | "COOLDOWN">
-  >({});
+  const [lineSection, setLineSection] = useState<Record<string, LineSection>>({});
   const [addSetsDraft, setAddSetsDraft] = useState<Record<string, string>>({});
   const [addSetsError, setAddSetsError] = useState<Record<string, string | null>>({});
   const [selectedLines, setSelectedLines] = useState<Record<string, Set<string>>>({});
@@ -167,6 +261,12 @@ export function ProgramBuilder({
   const [editTitle, setEditTitle] = useState(initial.title);
   const [editDescription, setEditDescription] = useState(initial.description);
   const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [dragging, setDragging] = useState<DragBlockPayload | null>(null);
+  const [dropHint, setDropHint] = useState<{
+    dayId: string;
+    section: LineSection;
+    blockIndex: number;
+  } | null>(null);
 
   const sortedDays = useMemo(
     () =>
@@ -280,7 +380,7 @@ export function ProgramBuilder({
 
   async function patchLine(
     id: string,
-    patch: Partial<{ section: "MOVEMENT_PREP" | "STRENGTH" | "COOLDOWN"; setCount: number }>
+    patch: Partial<{ section: LineSection; setCount: number }>
   ) {
     setBusy(true);
     await fetch(`/api/coach/exercise-lines/${id}`, {
@@ -508,22 +608,115 @@ export function ProgramBuilder({
     );
   }
 
+  async function commitDayLayout(dayId: string, sections: Record<LineSection, string[]>) {
+    const day = program.days.find((d) => d.id === dayId);
+    if (!day) return;
+
+    const byId = new Map(day.exercises.map((e) => [e.id, e]));
+    const nextExercises: Line[] = [];
+    for (const section of SECTION_KEYS) {
+      for (const id of sections[section]) {
+        const line = byId.get(id);
+        if (line) nextExercises.push({ ...line, section });
+      }
+    }
+
+    setProgram((prev) => ({
+      ...prev,
+      days: prev.days.map((d) => (d.id === dayId ? { ...d, exercises: nextExercises } : d)),
+    }));
+
+    setBusy(true);
+    const res = await fetch(`/api/coach/program-days/${dayId}/lines/reorder`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sections }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      await refresh();
+      return;
+    }
+    await refresh();
+  }
+
+  function dropBlock(
+    dayId: string,
+    toSection: LineSection,
+    toBlockIndex: number,
+    payload: DragBlockPayload
+  ) {
+    if (payload.dayId !== dayId) return;
+    const day = program.days.find((d) => d.id === dayId);
+    if (!day) return;
+
+    const fromBlocks = groupLinesForDisplay(
+      day.exercises.filter((l) => l.section === payload.fromSection)
+    );
+    const fromIdx = fromBlocks.findIndex((b) => blockKeyFromDisplay(b) === payload.blockKey);
+    if (fromIdx < 0) return;
+
+    let insertAt = toBlockIndex;
+    if (payload.fromSection === toSection) {
+      if (fromIdx === toBlockIndex || fromIdx + 1 === toBlockIndex) return;
+      if (fromIdx < toBlockIndex) insertAt = toBlockIndex - 1;
+    }
+
+    const sections = moveBlockInLayout(
+      day.exercises,
+      payload.fromSection,
+      toSection,
+      payload.lineIds,
+      insertAt
+    );
+    void commitDayLayout(dayId, sections);
+  }
+
+  function onBlockDragStart(
+    e: React.DragEvent,
+    dayId: string,
+    section: LineSection,
+    block: ReturnType<typeof groupLinesForDisplay<Line>>[number]
+  ) {
+    const payload: DragBlockPayload = {
+      dayId,
+      fromSection: section,
+      blockKey: blockKeyFromDisplay(block),
+      lineIds: lineIdsFromDisplay(block),
+    };
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData(DRAG_MIME, JSON.stringify(payload));
+    e.dataTransfer.setData("text/plain", payload.blockKey);
+    setDragging(payload);
+  }
+
+  function parseDragPayload(e: React.DragEvent): DragBlockPayload | null {
+    const raw = e.dataTransfer.getData(DRAG_MIME) || e.dataTransfer.getData("text/plain");
+    if (!raw) return dragging;
+    try {
+      if (raw.startsWith("{")) return JSON.parse(raw) as DragBlockPayload;
+    } catch {
+      /* ignore */
+    }
+    return dragging;
+  }
+
   function renderLineRow(dayId: string, ln: Line, indexLabel: string) {
     const checked = selectedLines[dayId]?.has(ln.id) ?? false;
     return (
-      <li
+      <div
         key={ln.id}
         className="flex flex-col gap-2 rounded-xl border border-gymsanity-100 bg-gymsanity-50/40 p-3 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
       >
-        <div className="flex min-w-0 items-start gap-3">
-          <input
-            type="checkbox"
-            checked={checked}
-            onChange={() => toggleLineSelect(dayId, ln.id)}
-            className="mt-1 rounded text-gymsanity-700"
-            aria-label={`Select ${ln.name}`}
-          />
-          <div className="min-w-0">
+          <div className="flex min-w-0 items-start gap-3">
+            <input
+              type="checkbox"
+              checked={checked}
+              onChange={() => toggleLineSelect(dayId, ln.id)}
+              className="mt-1 rounded text-gymsanity-700"
+              aria-label={`Select ${ln.name}`}
+            />
+            <div className="min-w-0">
             <span className="font-medium text-gymsanity-950">
               {indexLabel}. {ln.name}
               {ln.pairOrder ? (
@@ -543,7 +736,7 @@ export function ProgramBuilder({
               disabled={busy}
               onChange={(e) =>
                 void patchLine(ln.id, {
-                  section: e.target.value as "MOVEMENT_PREP" | "STRENGTH" | "COOLDOWN",
+                  section: e.target.value as LineSection,
                 })
               }
               className="rounded-lg border border-gymsanity-200 bg-white px-2 py-1 text-xs"
@@ -567,7 +760,7 @@ export function ProgramBuilder({
             Remove
           </button>
         </div>
-      </li>
+      </div>
     );
   }
 
@@ -670,52 +863,150 @@ export function ProgramBuilder({
 
   function renderSectionBlocks(
     dayId: string,
-    section: "MOVEMENT_PREP" | "STRENGTH" | "COOLDOWN",
+    section: LineSection,
     lines: Line[],
     sectionLabel: string
   ) {
     const sectionLines = lines.filter((l) => l.section === section);
-    if (sectionLines.length === 0) {
-      return (
-        <p className="rounded-xl border border-dashed border-gymsanity-100 bg-gymsanity-50/40 px-4 py-6 text-center text-sm text-gymsanity-700">
-          No {sectionLabel.toLowerCase()} blocks yet.
-        </p>
-      );
+    const blocks = groupLinesForDisplay(sectionLines);
+    const isDropTarget =
+      dropHint?.dayId === dayId &&
+      dropHint.section === section &&
+      dragging != null;
+
+    function setHint(blockIndex: number) {
+      setDropHint({ dayId, section, blockIndex });
+    }
+
+    function clearHintIfMine() {
+      setDropHint((h) => (h?.dayId === dayId && h.section === section ? null : h));
     }
 
     return (
-      <ol className="space-y-3">
-        {groupLinesForDisplay(sectionLines).map((block, blockIdx) => {
-          if (block.kind === "single") {
-            return renderLineRow(dayId, block.line, String(blockIdx + 1));
-          }
-          return (
-            <li
-              key={block.groupId}
-              className="rounded-2xl border-2 border-dashed border-violet-200 bg-violet-50/40 p-3"
-            >
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs font-bold uppercase tracking-wide text-violet-900">
-                  {pairTypeLabel(block.pairType)} ·{" "}
-                  {block.lines.map((l) => pairLetter(l.pairOrder)).join(" → ")}
-                </p>
-                <p className="text-[11px] text-violet-900/80">
-                  {pairFlowHint(block.pairType, block.lines.length)}
-                </p>
-              </div>
-              <ol className="space-y-2">
-                {block.lines.map((ln, i) =>
-                  renderLineRow(
-                    dayId,
-                    ln,
-                    `${blockIdx + 1}${pairLetter(ln.pairOrder) || String(i + 1)}`
-                  )
-                )}
-              </ol>
-            </li>
-          );
-        })}
-      </ol>
+      <div
+        className={`rounded-xl transition-colors ${
+          isDropTarget ? "bg-gymsanity-50/80 ring-2 ring-gymsanity-300/60" : ""
+        }`}
+        onDragOver={(e) => {
+          if (!dragging || dragging.dayId !== dayId) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+          if (blocks.length === 0) setHint(0);
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) clearHintIfMine();
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          const payload = parseDragPayload(e);
+          setDropHint(null);
+          setDragging(null);
+          if (!payload || payload.dayId !== dayId) return;
+          const idx = dropHint?.dayId === dayId && dropHint.section === section
+            ? dropHint.blockIndex
+            : blocks.length;
+          dropBlock(dayId, section, idx, payload);
+        }}
+      >
+        {blocks.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-gymsanity-100 bg-gymsanity-50/40 px-4 py-6 text-center text-sm text-gymsanity-700">
+            No {sectionLabel.toLowerCase()} blocks yet.
+            {dragging ? " Drop here to move." : ""}
+          </p>
+        ) : (
+          <ol className="space-y-3">
+            {blocks.map((block, blockIdx) => {
+              const key = blockKeyFromDisplay(block);
+              const isDraggingThis =
+                dragging?.dayId === dayId && dragging.blockKey === key;
+              const showLineBefore =
+                isDropTarget && dropHint?.blockIndex === blockIdx;
+
+              return (
+                <li key={key} className="list-none">
+                  {showLineBefore && (
+                    <div className="mb-2 h-1 rounded-full bg-gymsanity-600" aria-hidden />
+                  )}
+                  <div
+                    draggable={!busy}
+                    onDragStart={(e) => onBlockDragStart(e, dayId, section, block)}
+                    onDragEnd={() => {
+                      setDragging(null);
+                      setDropHint(null);
+                    }}
+                    onDragOver={(e) => {
+                      if (!dragging || dragging.dayId !== dayId) return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.dataTransfer.dropEffect = "move";
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const before = e.clientY < rect.top + rect.height / 2;
+                      setHint(before ? blockIdx : blockIdx + 1);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const payload = parseDragPayload(e);
+                      const idx =
+                        dropHint?.dayId === dayId && dropHint.section === section
+                          ? dropHint.blockIndex
+                          : blockIdx;
+                      setDropHint(null);
+                      setDragging(null);
+                      if (!payload || payload.dayId !== dayId) return;
+                      dropBlock(dayId, section, idx, payload);
+                    }}
+                    className={`rounded-2xl ${isDraggingThis ? "opacity-40" : ""}`}
+                  >
+                    {block.kind === "single" ? (
+                      <div className="flex items-start gap-2">
+                        <span className="pt-3">
+                          <DragHandle label="Drag to reorder or move section" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          {renderLineRow(dayId, block.line, String(blockIdx + 1))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border-2 border-dashed border-violet-200 bg-violet-50/40 p-3">
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <DragHandle label="Drag pair group to reorder or move section" />
+                            <p className="text-xs font-bold uppercase tracking-wide text-violet-900">
+                              {pairTypeLabel(block.pairType)} ·{" "}
+                              {block.lines.map((l) => pairLetter(l.pairOrder)).join(" → ")}
+                            </p>
+                          </div>
+                          <p className="text-[11px] text-violet-900/80">
+                            {pairFlowHint(block.pairType, block.lines.length)}
+                          </p>
+                        </div>
+                        <ol className="space-y-2">
+                          {block.lines.map((ln, i) => (
+                            <li key={ln.id} className="list-none">
+                              {renderLineRow(
+                                dayId,
+                                ln,
+                                `${blockIdx + 1}${pairLetter(ln.pairOrder) || String(i + 1)}`
+                              )}
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+            {isDropTarget && dropHint?.blockIndex === blocks.length && (
+              <div className="h-1 rounded-full bg-gymsanity-600" aria-hidden />
+            )}
+          </ol>
+        )}
+        <p className="mt-2 text-[11px] text-gymsanity-600">
+          Drag blocks to reorder or move between Movement prep, Strength, and Cooldown.
+        </p>
+      </div>
     );
   }
 
@@ -729,7 +1020,7 @@ export function ProgramBuilder({
             onChange={(e) =>
               setLineSection((s) => ({
                 ...s,
-                [dayId]: e.target.value as "MOVEMENT_PREP" | "STRENGTH" | "COOLDOWN",
+                [dayId]: e.target.value as LineSection,
               }))
             }
             className="mt-1 w-full min-w-[140px] rounded-xl border border-gymsanity-200 bg-white px-3 py-2"
