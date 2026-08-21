@@ -44,7 +44,9 @@ export default async function ProgramsPage() {
                 For you · coach tailored
               </p>
             )}
-            <p className="mt-2 text-sm leading-relaxed text-gymsanity-900/75">{p.description}</p>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-gymsanity-900/75">
+              {p.description}
+            </p>
             <p className="mt-3 text-xs text-gymsanity-800/70">
               {p.weeks} weeks · {p._count.days} sessions
             </p>

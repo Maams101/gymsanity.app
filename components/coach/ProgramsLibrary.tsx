@@ -232,7 +232,9 @@ export function ProgramsLibrary({
                   <h3 className="font-display text-lg font-semibold text-gymsanity-950 group-hover:text-gymsanity-800">
                     {p.title}
                   </h3>
-                  <p className="mt-1 line-clamp-2 text-sm text-gymsanity-800/85">{p.description}</p>
+                  <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-sm text-gymsanity-800/85">
+                    {p.description}
+                  </p>
                 </Link>
                 <div className="mt-4 flex flex-1 flex-wrap items-end justify-between gap-2 border-t border-gymsanity-50 pt-4 text-xs text-gymsanity-700">
                   <span>

@@ -593,12 +593,12 @@ export function ProgramBuilder({
 
   async function saveDetails() {
     const title = editTitle.trim();
-    const description = editDescription.trim();
+    const description = editDescription;
     if (title.length < 2) {
       setDetailsError("Title needs at least 2 characters.");
       return;
     }
-    if (description.length < 2) {
+    if (description.trim().length < 2) {
       setDetailsError("Description needs at least 2 characters.");
       return;
     }
@@ -666,7 +666,7 @@ export function ProgramBuilder({
     (assignTo === "" ? null : assignTo) !== (program.assignedMemberId ?? null);
 
   const detailsDirty =
-    editTitle.trim() !== program.title || editDescription.trim() !== program.description;
+    editTitle.trim() !== program.title || editDescription !== program.description;
 
   function renderSectionBlocks(
     dayId: string,

@@ -50,7 +50,9 @@ export default async function ProgramDetailPage({ params }: Props) {
             Coach tailored · only visible to you
           </p>
         )}
-        <p className="mt-2 max-w-2xl text-gymsanity-900/75">{program.description}</p>
+        <p className="mt-2 max-w-2xl whitespace-pre-wrap text-gymsanity-900/75">
+          {program.description}
+        </p>
       </div>
 
       <ol className="space-y-3">
