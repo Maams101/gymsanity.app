@@ -885,18 +885,23 @@ export function ProgramBuilder({
 
     setCopyWeek1Error(null);
     setBusy(true);
-    const res = await fetch(`/api/coach/programs/${program.id}/copy-week1`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ targetWeeks }),
-    });
-    setBusy(false);
-    if (!res.ok) {
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
-      setCopyWeek1Error(data?.error ?? "Could not copy Week 1. Try again.");
-      return;
+    try {
+      const res = await fetch(`/api/coach/programs/${program.id}/copy-week1`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetWeeks }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        setCopyWeek1Error(data?.error ?? "Could not copy Week 1. Try again.");
+        return;
+      }
+      await refresh();
+    } catch {
+      setCopyWeek1Error("Could not reach the server. Check your connection and try again.");
+    } finally {
+      setBusy(false);
     }
-    await refresh();
   }
 
   async function saveDetails() {
