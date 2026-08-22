@@ -261,6 +261,9 @@ export function ProgramBuilder({
   const [editTitle, setEditTitle] = useState(initial.title);
   const [editDescription, setEditDescription] = useState(initial.description);
   const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [editDayTitle, setEditDayTitle] = useState(initial.days[0]?.title ?? "");
+  const [editDayFocus, setEditDayFocus] = useState(initial.days[0]?.focusNote ?? "");
+  const [dayDetailsError, setDayDetailsError] = useState<string | null>(null);
   const [dragging, setDragging] = useState<DragBlockPayload | null>(null);
   const [dropHint, setDropHint] = useState<{
     dayId: string;
@@ -287,6 +290,9 @@ export function ProgramBuilder({
   }, [sortedDays]);
 
   const selectedDay = sortedDays.find((d) => d.id === selectedDayId) ?? null;
+  const selectedDaySyncId = selectedDay?.id ?? null;
+  const selectedDaySyncTitle = selectedDay?.title ?? "";
+  const selectedDaySyncFocus = selectedDay?.focusNote ?? "";
 
   const exercisesByMuscleGroup = useMemo(() => {
     const map = new Map<MuscleGroup, Ex[]>();
@@ -320,6 +326,18 @@ export function ProgramBuilder({
       setSelectedDayId(sortedDays[0].id);
     }
   }, [sortedDays, selectedDayId]);
+
+  useEffect(() => {
+    if (!selectedDaySyncId) {
+      setEditDayTitle("");
+      setEditDayFocus("");
+      setDayDetailsError(null);
+      return;
+    }
+    setEditDayTitle(selectedDaySyncTitle);
+    setEditDayFocus(selectedDaySyncFocus);
+    setDayDetailsError(null);
+  }, [selectedDaySyncId, selectedDaySyncTitle, selectedDaySyncFocus]);
 
   async function refresh() {
     const res = await fetch(`/api/coach/programs/${program.id}`);
@@ -773,6 +791,32 @@ export function ProgramBuilder({
     await refresh();
   }
 
+  async function saveDayDetails(dayId: string) {
+    const title = editDayTitle.trim();
+    const focusNote = editDayFocus.trim();
+    if (title.length < 2) {
+      setDayDetailsError("Title needs at least 2 characters.");
+      return;
+    }
+    const day = sortedDays.find((d) => d.id === dayId);
+    if (!day) return;
+    const nextFocus = focusNote === "" ? null : focusNote;
+    if (title === day.title && nextFocus === (day.focusNote ?? null)) return;
+    setDayDetailsError(null);
+    setBusy(true);
+    const res = await fetch(`/api/coach/program-days/${dayId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, focusNote: nextFocus }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setDayDetailsError("Could not save. Try again.");
+      return;
+    }
+    await refresh();
+  }
+
   async function togglePublish() {
     setBusy(true);
     await fetch(`/api/coach/programs/${program.id}`, {
@@ -860,6 +904,11 @@ export function ProgramBuilder({
 
   const detailsDirty =
     editTitle.trim() !== program.title || editDescription !== program.description;
+
+  const dayDetailsDirty = selectedDay
+    ? editDayTitle.trim() !== selectedDay.title ||
+      (editDayFocus.trim() === "" ? null : editDayFocus.trim()) !== (selectedDay.focusNote ?? null)
+    : false;
 
   function renderSectionBlocks(
     dayId: string,
@@ -1090,12 +1139,46 @@ export function ProgramBuilder({
     return (
       <section className="rounded-2xl border border-gymsanity-100 bg-white/90 p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-wide text-gymsanity-600">
               Week {d.weekNumber} · Day {d.dayIndex}
             </p>
-            <h3 className="font-display text-xl font-semibold text-gymsanity-950">{d.title}</h3>
-            {d.focusNote && <p className="text-sm text-gymsanity-800/80">{d.focusNote}</p>}
+            {dayDetailsError && <p className="mt-2 text-sm text-red-700">{dayDetailsError}</p>}
+            <div className="mt-2 grid gap-3">
+              <label className="block text-sm font-medium text-gymsanity-900">
+                Session title *
+                <input
+                  value={editDayTitle}
+                  onChange={(e) => {
+                    setDayDetailsError(null);
+                    setEditDayTitle(e.target.value);
+                  }}
+                  disabled={busy}
+                  className="mt-1 w-full rounded-xl border border-gymsanity-200 px-3 py-2 font-display text-lg font-semibold text-gymsanity-950"
+                />
+              </label>
+              <label className="block text-sm font-medium text-gymsanity-900">
+                Focus note
+                <input
+                  value={editDayFocus}
+                  onChange={(e) => {
+                    setDayDetailsError(null);
+                    setEditDayFocus(e.target.value);
+                  }}
+                  disabled={busy}
+                  placeholder="Optional — e.g. Upper body push"
+                  className="mt-1 w-full rounded-xl border border-gymsanity-200 px-3 py-2 text-sm text-gymsanity-950"
+                />
+              </label>
+            </div>
+            <button
+              type="button"
+              disabled={busy || !dayDetailsDirty}
+              onClick={() => void saveDayDetails(d.id)}
+              className="mt-3 rounded-full bg-gymsanity-800 px-4 py-2 text-sm font-semibold text-white hover:bg-gymsanity-900 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Save session details
+            </button>
           </div>
           <button
             type="button"
