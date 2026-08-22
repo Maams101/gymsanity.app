@@ -263,6 +263,8 @@ export function ProgramBuilder({
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [editDayTitle, setEditDayTitle] = useState(initial.days[0]?.title ?? "");
   const [editDayFocus, setEditDayFocus] = useState(initial.days[0]?.focusNote ?? "");
+  const [editDayWeek, setEditDayWeek] = useState(initial.days[0]?.weekNumber ?? 1);
+  const [editDayIndex, setEditDayIndex] = useState(initial.days[0]?.dayIndex ?? 1);
   const [dayDetailsError, setDayDetailsError] = useState<string | null>(null);
   const [dragging, setDragging] = useState<DragBlockPayload | null>(null);
   const [dropHint, setDropHint] = useState<{
@@ -293,6 +295,8 @@ export function ProgramBuilder({
   const selectedDaySyncId = selectedDay?.id ?? null;
   const selectedDaySyncTitle = selectedDay?.title ?? "";
   const selectedDaySyncFocus = selectedDay?.focusNote ?? "";
+  const selectedDaySyncWeek = selectedDay?.weekNumber ?? 1;
+  const selectedDaySyncDayIndex = selectedDay?.dayIndex ?? 1;
 
   const exercisesByMuscleGroup = useMemo(() => {
     const map = new Map<MuscleGroup, Ex[]>();
@@ -331,13 +335,23 @@ export function ProgramBuilder({
     if (!selectedDaySyncId) {
       setEditDayTitle("");
       setEditDayFocus("");
+      setEditDayWeek(1);
+      setEditDayIndex(1);
       setDayDetailsError(null);
       return;
     }
     setEditDayTitle(selectedDaySyncTitle);
     setEditDayFocus(selectedDaySyncFocus);
+    setEditDayWeek(selectedDaySyncWeek);
+    setEditDayIndex(selectedDaySyncDayIndex);
     setDayDetailsError(null);
-  }, [selectedDaySyncId, selectedDaySyncTitle, selectedDaySyncFocus]);
+  }, [
+    selectedDaySyncId,
+    selectedDaySyncTitle,
+    selectedDaySyncFocus,
+    selectedDaySyncWeek,
+    selectedDaySyncDayIndex,
+  ]);
 
   async function refresh() {
     const res = await fetch(`/api/coach/programs/${program.id}`);
@@ -794,6 +808,16 @@ export function ProgramBuilder({
   async function saveDayDetails(dayId: string) {
     const title = editDayTitle.trim();
     const focusNote = editDayFocus.trim();
+    const weekNumber = editDayWeek;
+    const dayIndex = editDayIndex;
+    if (!Number.isInteger(weekNumber) || weekNumber < 1) {
+      setDayDetailsError("Week must be at least 1.");
+      return;
+    }
+    if (!Number.isInteger(dayIndex) || dayIndex < 1) {
+      setDayDetailsError("Day # must be at least 1.");
+      return;
+    }
     if (title.length < 2) {
       setDayDetailsError("Title needs at least 2 characters.");
       return;
@@ -801,13 +825,20 @@ export function ProgramBuilder({
     const day = sortedDays.find((d) => d.id === dayId);
     if (!day) return;
     const nextFocus = focusNote === "" ? null : focusNote;
-    if (title === day.title && nextFocus === (day.focusNote ?? null)) return;
+    if (
+      title === day.title &&
+      nextFocus === (day.focusNote ?? null) &&
+      weekNumber === day.weekNumber &&
+      dayIndex === day.dayIndex
+    ) {
+      return;
+    }
     setDayDetailsError(null);
     setBusy(true);
     const res = await fetch(`/api/coach/program-days/${dayId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, focusNote: nextFocus }),
+      body: JSON.stringify({ title, focusNote: nextFocus, weekNumber, dayIndex }),
     });
     setBusy(false);
     if (!res.ok) {
@@ -907,7 +938,10 @@ export function ProgramBuilder({
 
   const dayDetailsDirty = selectedDay
     ? editDayTitle.trim() !== selectedDay.title ||
-      (editDayFocus.trim() === "" ? null : editDayFocus.trim()) !== (selectedDay.focusNote ?? null)
+      (editDayFocus.trim() === "" ? null : editDayFocus.trim()) !==
+        (selectedDay.focusNote ?? null) ||
+      editDayWeek !== selectedDay.weekNumber ||
+      editDayIndex !== selectedDay.dayIndex
     : false;
 
   function renderSectionBlocks(
@@ -1141,10 +1175,40 @@ export function ProgramBuilder({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-wide text-gymsanity-600">
-              Week {d.weekNumber} · Day {d.dayIndex}
+              Session details
             </p>
             {dayDetailsError && <p className="mt-2 text-sm text-red-700">{dayDetailsError}</p>}
             <div className="mt-2 grid gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block text-sm font-medium text-gymsanity-900">
+                  Week
+                  <input
+                    type="number"
+                    min={1}
+                    value={editDayWeek}
+                    onChange={(e) => {
+                      setDayDetailsError(null);
+                      setEditDayWeek(Number(e.target.value));
+                    }}
+                    disabled={busy}
+                    className="mt-1 w-full rounded-xl border border-gymsanity-200 px-3 py-2 text-sm text-gymsanity-950"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-gymsanity-900">
+                  Day #
+                  <input
+                    type="number"
+                    min={1}
+                    value={editDayIndex}
+                    onChange={(e) => {
+                      setDayDetailsError(null);
+                      setEditDayIndex(Number(e.target.value));
+                    }}
+                    disabled={busy}
+                    className="mt-1 w-full rounded-xl border border-gymsanity-200 px-3 py-2 text-sm text-gymsanity-950"
+                  />
+                </label>
+              </div>
               <label className="block text-sm font-medium text-gymsanity-900">
                 Session title *
                 <input
