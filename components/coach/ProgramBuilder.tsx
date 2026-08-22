@@ -56,6 +56,9 @@ const MIN_SETS = 1;
 const MAX_SETS = 20;
 const SETS_RANGE_MSG = `Whole number from ${MIN_SETS} to ${MAX_SETS}.`;
 
+const COPY_WEEK1_OPTIONS = [4, 8, 12] as const;
+type CopyWeek1Target = (typeof COPY_WEEK1_OPTIONS)[number];
+
 const SECTION_KEYS: LineSection[] = ["MOVEMENT_PREP", "STRENGTH", "COOLDOWN"];
 
 type DragBlockPayload = {
@@ -272,6 +275,7 @@ export function ProgramBuilder({
     section: LineSection;
     blockIndex: number;
   } | null>(null);
+  const [copyWeek1Error, setCopyWeek1Error] = useState<string | null>(null);
 
   const sortedDays = useMemo(
     () =>
@@ -859,6 +863,42 @@ export function ProgramBuilder({
     await refresh();
   }
 
+  async function copyWeek1Across(targetWeeks: CopyWeek1Target) {
+    const week1Days = program.days.filter((d) => d.weekNumber === 1);
+    if (week1Days.length === 0) {
+      setCopyWeek1Error("Add at least one Week 1 session before copying.");
+      return;
+    }
+
+    const laterHasExercises = program.days.some(
+      (d) =>
+        d.weekNumber >= 2 &&
+        d.weekNumber <= targetWeeks &&
+        d.exercises.length > 0
+    );
+    if (laterHasExercises) {
+      const ok = confirm(
+        `Weeks 2–${targetWeeks} already have exercises. Replace those sessions’ exercise lists with Week 1’s? Missing days will be created from Week 1.`
+      );
+      if (!ok) return;
+    }
+
+    setCopyWeek1Error(null);
+    setBusy(true);
+    const res = await fetch(`/api/coach/programs/${program.id}/copy-week1`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetWeeks }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      setCopyWeek1Error(data?.error ?? "Could not copy Week 1. Try again.");
+      return;
+    }
+    await refresh();
+  }
+
   async function saveDetails() {
     const title = editTitle.trim();
     const description = editDescription;
@@ -1425,6 +1465,33 @@ export function ProgramBuilder({
           </button>
         </div>
       )}
+
+      <div className="rounded-2xl border border-gymsanity-100 bg-white/90 p-4 shadow-sm">
+        <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-gymsanity-800">
+          Copy Week 1 across program
+        </h2>
+        <p className="mt-2 text-sm text-gymsanity-700">
+          Duplicates every Week 1 session’s exercises into the matching days for weeks 2
+          through 4, 8, or 12. Missing days are created from Week 1 (title and focus).
+          Pairing is preserved with new group ids. If later weeks already have exercises,
+          you’ll confirm before those lists are replaced. Program length is raised to the
+          chosen span when it’s currently shorter.
+        </p>
+        {copyWeek1Error && <p className="mt-2 text-sm text-red-700">{copyWeek1Error}</p>}
+        <div className="mt-3 flex flex-wrap gap-2">
+          {COPY_WEEK1_OPTIONS.map((n) => (
+            <button
+              key={n}
+              type="button"
+              disabled={busy}
+              onClick={() => void copyWeek1Across(n)}
+              className="rounded-full border border-gymsanity-200 bg-white px-4 py-2 text-sm font-semibold text-gymsanity-900 hover:bg-gymsanity-50 disabled:opacity-50"
+            >
+              {n} weeks
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <aside className="w-full shrink-0 lg:sticky lg:top-4 lg:w-72">
