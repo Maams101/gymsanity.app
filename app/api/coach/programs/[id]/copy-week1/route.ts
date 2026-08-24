@@ -23,7 +23,7 @@ const programInclude = {
   },
 };
 
-/** POST — copy every Week 1 session’s exercise lines into weeks 2..N */
+/** POST — sync Week 1 session titles, focus notes, and exercise lines into weeks 2..N */
 export async function POST(request: Request, { params }: Params) {
   const session = await requireCoach();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -106,6 +106,20 @@ export async function POST(request: Request, { params }: Params) {
           for (const day of created) {
             daysByWeekAndIndex.set(`${day.weekNumber}:${day.dayIndex}`, {
               id: day.id,
+            });
+          }
+        }
+
+        for (let week = 2; week <= targetWeeks; week++) {
+          for (const template of week1Days) {
+            const target = daysByWeekAndIndex.get(`${week}:${template.dayIndex}`);
+            if (!target) continue;
+            await tx.programDay.update({
+              where: { id: target.id },
+              data: {
+                title: template.title,
+                focusNote: template.focusNote,
+              },
             });
           }
         }

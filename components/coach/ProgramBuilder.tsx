@@ -878,7 +878,7 @@ export function ProgramBuilder({
     );
     if (laterHasExercises) {
       const ok = confirm(
-        `Weeks 2–${targetWeeks} already have exercises. Replace those sessions’ exercise lists with Week 1’s? Missing days will be created from Week 1.`
+        `Weeks 2–${targetWeeks} already have sessions. Replace their titles, focus notes, and exercise lists with Week 1’s? Missing days will be created from Week 1.`
       );
       if (!ok) return;
     }
@@ -1476,11 +1476,11 @@ export function ProgramBuilder({
           Copy Week 1 across program
         </h2>
         <p className="mt-2 text-sm text-gymsanity-700">
-          Duplicates every Week 1 session’s exercises into the matching days for weeks 2
-          through 4, 8, or 12. Missing days are created from Week 1 (title and focus).
-          Pairing is preserved with new group ids. If later weeks already have exercises,
-          you’ll confirm before those lists are replaced. Program length is raised to the
-          chosen span when it’s currently shorter.
+          Syncs every Week 1 session’s title, focus note, and exercises into the matching
+          days for weeks 2 through 4, 8, or 12. Missing days are created from Week 1.
+          Pairing is preserved with new group ids. If later weeks already have sessions,
+          you’ll confirm before their titles and exercise lists are replaced. Program
+          length is raised to the chosen span when it’s currently shorter.
         </p>
         {copyWeek1Error && <p className="mt-2 text-sm text-red-700">{copyWeek1Error}</p>}
         <div className="mt-3 flex flex-wrap gap-2">
