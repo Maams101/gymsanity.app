@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { getFocusGroupProgramPath, isFocusGroupMember } from "@/lib/focus-group";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/get-session";
 import { onboardingProfileSchema } from "@/lib/onboarding-schema";
@@ -25,5 +26,10 @@ export async function POST(request: Request) {
     },
   });
 
-  return NextResponse.json({ ok: true });
+  const next =
+    session.role === "MEMBER" && (await isFocusGroupMember(session.sub))
+      ? await getFocusGroupProgramPath()
+      : "/subscribe";
+
+  return NextResponse.json({ ok: true, next });
 }

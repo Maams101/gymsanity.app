@@ -160,12 +160,13 @@ export function OnboardingWizard() {
       body: JSON.stringify(parsed.data),
     });
     setLoading(false);
+    const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      setError(j.error ?? "Could not save. Try again.");
+      setError(body.error ?? "Could not save. Try again.");
       return;
     }
-    router.push("/subscribe");
+    const next = typeof body.next === "string" ? body.next : "/subscribe";
+    router.push(next);
     router.refresh();
   }
 

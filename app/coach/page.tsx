@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { BookingStatus } from "@prisma/client";
+import { appBaseUrl } from "@/lib/app-url";
 import { prisma } from "@/lib/db";
-import { getFocusGroupFeedbackCount } from "@/lib/focus-group";
+import { FOCUS_GROUP_JOIN_PATH, getFocusGroupFeedbackCount } from "@/lib/focus-group";
 import { CoachCreateSlotForm } from "@/components/CoachCreateSlotForm";
 import { CoachBookingActions } from "@/components/CoachBookingActions";
 import { CoachWorkoutOfDayForm } from "@/components/coach/CoachWorkoutOfDayForm";
@@ -70,16 +71,29 @@ export default async function CoachPage() {
       </div>
 
       <div className="rounded-2xl border border-gymsanity-100 bg-white/90 p-6 shadow-sm">
-        <h2 className="font-display text-lg font-semibold text-gymsanity-950">Focus group invites</h2>
+        <h2 className="font-display text-lg font-semibold text-gymsanity-950">Focus group access</h2>
         <p className="mt-2 text-sm text-gymsanity-900/75">
-          Generate single-use links for focus-group participants — full access, no payment required.
+          Share one link with all focus-group participants — signup, login, and access to the Focus
+          Group Challenge program. No payment required.
         </p>
-        <Link
-          href="/coach/invites"
-          className="mt-4 inline-flex rounded-full bg-gymsanity-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gymsanity-800"
-        >
-          Manage invites
-        </Link>
+        <p className="mt-3 break-all rounded-xl bg-gymsanity-50 px-4 py-3 font-mono text-xs text-gymsanity-900">
+          {appBaseUrl()}
+          {FOCUS_GROUP_JOIN_PATH}
+        </p>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Link
+            href={FOCUS_GROUP_JOIN_PATH}
+            className="inline-flex rounded-full bg-gymsanity-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gymsanity-800"
+          >
+            Preview join page
+          </Link>
+          <Link
+            href="/coach/invites"
+            className="inline-flex rounded-full border border-gymsanity-200 bg-white px-5 py-2.5 text-sm font-semibold text-gymsanity-900 hover:bg-gymsanity-50"
+          >
+            Single-use invites
+          </Link>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-gymsanity-100 bg-white/90 p-6 shadow-sm">
