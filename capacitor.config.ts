@@ -9,8 +9,16 @@ const config: CapacitorConfig = {
     // Production web app — Capacitor WebView loads this URL instead of bundled assets.
     url: "https://gymsanity.fit",
     cleartext: false,
-    // Allow navigation within the Gymsanity domain (Stripe checkout, etc.).
-    allowNavigation: ["gymsanity.fit", "*.gymsanity.fit", "checkout.stripe.com"],
+    // Allow in-WebView navigation for app + Stripe Checkout / Customer Portal.
+    // Do not add cleartext / localhost URLs here for committed production config.
+    allowNavigation: [
+      "gymsanity.fit",
+      "*.gymsanity.fit",
+      "checkout.stripe.com",
+      "billing.stripe.com",
+      "js.stripe.com",
+      "*.stripe.com",
+    ],
   },
   ios: {
     contentInset: "automatic",
