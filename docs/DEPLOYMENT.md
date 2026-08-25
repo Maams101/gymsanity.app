@@ -18,12 +18,16 @@ npx prisma db push
 
 ## 2. Stripe products & prices
 
-1. In [Stripe Dashboard](https://dashboard.stripe.com) → **Product catalog**, create products/prices that match your app plans (seed + registration currently use **Digital** and **Elite**).
-2. For each plan, add a **recurring price** (monthly is typical). Copy each **Price ID** (`price_...`).
+**Gymsanity LLC live setup (full checklist):** [STRIPE_LLC_SETUP.md](./STRIPE_LLC_SETUP.md)
+
+1. In [Stripe Dashboard](https://dashboard.stripe.com) → **Product catalog**, create products/prices for offered plans: **Digital** (recurring) and session packs **6 / 12 / 24** (one-time).
+2. Copy each **Price ID** (`price_...`). Billing type must match the plan (subscription vs one-time).
 3. Put them in environment variables (Vercel + local):
 
    - `STRIPE_PRICE_DIGITAL`
-   - `STRIPE_PRICE_ELITE`
+   - `STRIPE_PRICE_SESSIONS_6`
+   - `STRIPE_PRICE_SESSIONS_12`
+   - `STRIPE_PRICE_SESSIONS_24`
 
 4. Run seed (or update `Plan` rows in Prisma Studio) so `stripePriceId` is stored:
 
@@ -64,8 +68,10 @@ Use the webhook signing secret the CLI prints as `STRIPE_WEBHOOK_SECRET` in `.en
 | `JWT_SECRET` | Long random string (openssl rand -hex 32) |
 | `NEXT_PUBLIC_APP_URL` | Public site URL, e.g. `https://gymsanity.fit` (no trailing slash) |
 | `STRIPE_SECRET_KEY` | Secret key (`sk_live_...` or `sk_test_...`) |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Publishable key (same mode as secret) |
 | `STRIPE_WEBHOOK_SECRET` | From Stripe webhook or `stripe listen` |
-| `STRIPE_PRICE_DIGITAL` | etc. (optional if you set prices only via DB) |
+| `STRIPE_PRICE_DIGITAL` | Recurring price for Digital (or set via DB) |
+| `STRIPE_PRICE_SESSIONS_6` / `_12` / `_24` | One-time session-pack prices (or set via DB) |
 
 `VERCEL_URL` is set automatically; `NEXT_PUBLIC_APP_URL` should still be your canonical URL for Stripe redirects.
 

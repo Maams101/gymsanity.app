@@ -67,7 +67,8 @@ The member account is on the **Hybrid** plan with **2** 1:1 credits and sample p
 - **Without** `STRIPE_SECRET_KEY` **or** without `stripePriceId` on a plan → registration grants an **active** membership immediately (handy for local dev).  
 - **With** Stripe keys and price IDs on plans → new members complete **Checkout** before access activates.  
 
-See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for live keys, webhooks, and Vercel.
+Connect **Gymsanity LLC** Stripe to production: [docs/STRIPE_LLC_SETUP.md](./docs/STRIPE_LLC_SETUP.md).  
+Also [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for Neon, webhooks, and Vercel.
 
 Product and UX rationale for **music + programming** features: [docs/FEATURES.md](./docs/FEATURES.md).
 

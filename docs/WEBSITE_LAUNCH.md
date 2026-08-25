@@ -62,8 +62,12 @@ DATABASE_URL="postgresql://YOUR_NEON_URL" npm run db:seed
 | `STRIPE_SECRET_KEY` | `sk_test_...` first, then `sk_live_...` |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_test_...` or `pk_live_...` |
 | `STRIPE_WEBHOOK_SECRET` | From Stripe webhook (step 5) |
-| `STRIPE_PRICE_DIGITAL` | `price_...` from Stripe |
-| `STRIPE_PRICE_ELITE` | `price_...` from Stripe |
+| `STRIPE_PRICE_DIGITAL` | Recurring `price_...` |
+| `STRIPE_PRICE_SESSIONS_6` | One-time `price_...` |
+| `STRIPE_PRICE_SESSIONS_12` | One-time `price_...` |
+| `STRIPE_PRICE_SESSIONS_24` | One-time `price_...` |
+
+Full LLC live checklist: [STRIPE_LLC_SETUP.md](./STRIPE_LLC_SETUP.md).
 
 5. Click **Deploy**. Note the `*.vercel.app` URL — test login there before switching DNS.
 
@@ -124,12 +128,14 @@ After DNS propagates and Vercel redeploys with `NEXT_PUBLIC_APP_URL=https://gyms
 
 ---
 
-## Step 7 — Go live with real payments
+## Step 7 — Go live with real payments (Gymsanity LLC)
 
-1. Switch Stripe keys from `sk_test_` / `pk_test_` to **live** keys in Vercel.
-2. Create **live** products/prices; update `STRIPE_PRICE_*` env vars.
-3. Add a **live** webhook endpoint (same URL).
-4. Redeploy.
+Follow **[STRIPE_LLC_SETUP.md](./STRIPE_LLC_SETUP.md)** end-to-end:
+
+1. Switch Stripe keys from `sk_test_` / `pk_test_` to **live** keys in Vercel (never paste secrets into chat).
+2. Create **live** products/prices; update `STRIPE_PRICE_*` env vars (or Plan rows in DB).
+3. Add a **live** webhook endpoint (`https://gymsanity.fit/api/stripe/webhook`).
+4. Enable Customer Portal + Apple Pay domain if needed; redeploy.
 
 ---
 
