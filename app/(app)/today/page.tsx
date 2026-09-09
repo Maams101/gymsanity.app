@@ -7,6 +7,7 @@ import { getDayAtAGlance } from "@/lib/day-at-a-glance";
 import { getSession } from "@/lib/get-session";
 import { getActiveMembership, getCreditBalance, getPendingMembership } from "@/lib/membership";
 import { prismaWherePublishedProgramForMember } from "@/lib/program-visibility";
+import { ACCOUNTABILITY_STREAK_ENABLED } from "@/lib/accountability-streak";
 
 export default async function TodayPage() {
   const session = await getSession();
@@ -71,14 +72,16 @@ export default async function TodayPage() {
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-gymsanity-200 bg-gradient-to-br from-gymsanity-50 to-white p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gymsanity-600">Streak</p>
-          <p className="mt-1 font-display text-3xl font-semibold text-gymsanity-950">
-            {userRow?.loyaltyStreak ?? 0}
-            <span className="text-base font-medium text-gymsanity-600">/11</span>
-          </p>
-        </div>
+      <div className={`grid gap-3 ${ACCOUNTABILITY_STREAK_ENABLED ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        {ACCOUNTABILITY_STREAK_ENABLED ? (
+          <div className="rounded-2xl border border-gymsanity-200 bg-gradient-to-br from-gymsanity-50 to-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gymsanity-600">Streak</p>
+            <p className="mt-1 font-display text-3xl font-semibold text-gymsanity-950">
+              {userRow?.loyaltyStreak ?? 0}
+              <span className="text-base font-medium text-gymsanity-600">/11</span>
+            </p>
+          </div>
+        ) : null}
         <div className="rounded-2xl border border-gymsanity-200 bg-white/90 p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-gymsanity-600">1:1 credits</p>
           <p className="mt-1 font-display text-3xl font-semibold text-gymsanity-950">{credits}</p>

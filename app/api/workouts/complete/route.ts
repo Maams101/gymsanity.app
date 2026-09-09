@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/get-session";
-import { advanceAccountabilityStreak, isFirstCompletionToday } from "@/lib/accountability-streak";
+import {
+  ACCOUNTABILITY_STREAK_ENABLED,
+  advanceAccountabilityStreak,
+  isFirstCompletionToday,
+} from "@/lib/accountability-streak";
 import { getActiveMembership } from "@/lib/membership";
 import { memberCanAccessPublishedProgram } from "@/lib/program-visibility";
 
@@ -65,7 +69,7 @@ export async function POST(request: Request) {
   });
 
   let accountability: { streak: number; rewardedCredit: boolean } | undefined;
-  if (!existing) {
+  if (ACCOUNTABILITY_STREAK_ENABLED && !existing) {
     const firstToday = await isFirstCompletionToday(session.sub);
     if (firstToday) {
       accountability = await advanceAccountabilityStreak(session.sub);

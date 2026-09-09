@@ -88,7 +88,7 @@ export default async function SessionPage({ params }: Props) {
             Load progression
           </Link>{" "}
           page and for your coach. When you&apos;re done with the full session, add a reflection and mark complete
-          below—that logs your accountability streak.
+          below.
         </p>
         <div className="mt-6">
           <WorkoutSessionTracker

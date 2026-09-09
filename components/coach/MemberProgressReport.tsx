@@ -45,8 +45,6 @@ export async function MemberProgressReport({ member }: { member: MemberProgressP
         <dl className="grid grid-cols-2 gap-x-5 gap-y-2 text-sm">
           <dt className="text-gymsanity-700/80">Sessions completed</dt>
           <dd className="font-semibold text-gymsanity-950">{completedCount}</dd>
-          <dt className="text-gymsanity-700/80">Accountability streak</dt>
-          <dd className="font-semibold text-gymsanity-950">{member.loyaltyStreak} / 11</dd>
           <dt className="text-gymsanity-700/80">Last activity</dt>
           <dd className="font-semibold text-gymsanity-950">{formatDate(lastActivity)}</dd>
         </dl>

@@ -95,7 +95,7 @@ export function MemberNavDropdowns({ preview }: Props) {
               Your rhythm
             </p>
             <p className="mt-2 text-sm leading-relaxed text-gymsanity-800/90">
-              Membership, accountability streak, and your next session—everything on the dashboard.
+              Membership and your next session—everything on the dashboard.
             </p>
             <Link
               href="/day"

@@ -1,5 +1,11 @@
 import { prisma } from "@/lib/db";
 
+/**
+ * Pause accountability streak tracking, rewards, and member-facing streak UI.
+ * Set to `true` to re-enable without further schema work.
+ */
+export const ACCOUNTABILITY_STREAK_ENABLED = false;
+
 const STREAK_TARGET = 11;
 
 function utcDateString(d: Date): string {
@@ -26,6 +32,10 @@ export async function advanceAccountabilityStreak(userId: string): Promise<{
   streak: number;
   rewardedCredit: boolean;
 }> {
+  if (!ACCOUNTABILITY_STREAK_ENABLED) {
+    return { streak: 0, rewardedCredit: false };
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { loyaltyStreak: true, lastStreakDay: true, role: true },

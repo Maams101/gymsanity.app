@@ -85,7 +85,7 @@ export function DayAtAGlancePanel({ data, variant = "full" }: Props) {
           <h3 className="text-sm font-semibold uppercase tracking-wide text-gymsanity-700">Training</h3>
           {data.programSessionCompletedToday ? (
             <p className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-sm text-emerald-950">
-              Program session logged today — streak {data.streak}/11.
+              Program session logged today.
             </p>
           ) : (
             <p className="mt-2 text-xs text-gymsanity-700">
