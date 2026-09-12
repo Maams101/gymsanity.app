@@ -3,7 +3,7 @@ export const SESSION_PACKS = [
     slug: "sessions-1",
     name: "1 session",
     sessions: 1,
-    pricePerSessionCents: 16000,
+    pricePerSessionCents: 18000,
     savingsPerSessionCents: 0,
     sortOrder: 2,
   },

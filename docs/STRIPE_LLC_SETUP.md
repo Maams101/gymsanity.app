@@ -31,7 +31,7 @@ Set these for **Production** on Vercel (and optionally Preview). Match **live** 
 | `STRIPE_WEBHOOK_SECRET` | Yes | `whsec_…` from the **live** endpoint for `https://gymsanity.fit/api/stripe/webhook` |
 | `NEXT_PUBLIC_APP_URL` | Yes | `https://gymsanity.fit` (no trailing slash) |
 | `STRIPE_PRICE_DIGITAL` | Yes* | Recurring price → plan slug `digital` |
-| `STRIPE_PRICE_SESSIONS_1` | Yes* | One-time price → `sessions-1` ($160) |
+| `STRIPE_PRICE_SESSIONS_1` | Yes* | One-time price → `sessions-1` ($180) |
 | `STRIPE_PRICE_SESSIONS_6` | Yes* | One-time price → `sessions-6` |
 | `STRIPE_PRICE_SESSIONS_12` | Yes* | One-time price → `sessions-12` |
 | `STRIPE_PRICE_SESSIONS_24` | Yes* | One-time price → `sessions-24` |
@@ -58,7 +58,7 @@ In **Product catalog**, create prices that match offered plans:
 | App plan slug | Billing | Suggested product |
 |---------------|---------|-------------------|
 | `digital` | **Recurring** (e.g. monthly) | Digital membership |
-| `sessions-1` | **One-time** | 1 × 1:1 session ($160) |
+| `sessions-1` | **One-time** | 1 × 1:1 session ($180) |
 | `sessions-6` | **One-time** | 6 × 1:1 sessions |
 | `sessions-12` | **One-time** | 12 × 1:1 sessions |
 | `sessions-24` | **One-time** | 24 × 1:1 sessions |

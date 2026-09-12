@@ -106,7 +106,7 @@ async function main() {
       where: { slug: "sessions-1" },
       update: {
         name: "1 session",
-        description: "One 1:1 coaching session. $160.",
+        description: "One 1:1 coaching session. $180.",
         includesDigitalPrograms: true,
         allowsGroupBooking: true,
         allowsOneOnOneBooking: true,
@@ -118,7 +118,7 @@ async function main() {
       create: {
         slug: "sessions-1",
         name: "1 session",
-        description: "One 1:1 coaching session. $160.",
+        description: "One 1:1 coaching session. $180.",
         includesDigitalPrograms: true,
         allowsGroupBooking: true,
         allowsOneOnOneBooking: true,
