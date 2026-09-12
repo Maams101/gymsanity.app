@@ -91,9 +91,20 @@ Paste into **Vercel** only (Production environment).
 - `https://gymsanity.fit/today`
 - `https://gymsanity.fit/post-checkout`
 
-### 6. Apple Pay (optional but recommended)
+### 6. Apple Pay
 
-**Settings** → **Payment methods** → **Apple Pay** → add domain **`gymsanity.fit`** (and `www` if used). Checkout can then show Apple Pay on Safari when verified.
+Apple Pay is enabled on the Gymsanity LLC **Default** payment method configuration.
+
+**Payment method domains** (required for Embedded Checkout on your site):
+
+- `gymsanity.fit` — registered & Apple Pay **active**
+- `www.gymsanity.fit` — registered & Apple Pay **active**
+
+Also served at `public/.well-known/apple-developer-merchantid-domain-association` for classic domain association.
+
+**Shopper requirements:** Safari (or supported browser) on a device with Apple Pay set up, over HTTPS. Apple Pay does not appear in all browsers (e.g. typical Chrome on Windows).
+
+Dashboard: [Payment method domains](https://dashboard.stripe.com/settings/payment_method_domains) (Live mode).
 
 ### 7. Point production DB at live prices
 

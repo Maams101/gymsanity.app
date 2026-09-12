@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const shared = {
+  const shared: Record<string, unknown> = {
     line_items: [{ price: plan.stripePriceId, quantity: 1 }],
     client_reference_id: user.id,
     metadata: { userId: user.id, planSlug: plan.slug },
@@ -91,6 +91,12 @@ export async function POST(request: Request) {
       ? { customer: user.stripeCustomerId }
       : { customer_email: user.email }),
   };
+
+  // Prefer account Default PMC (Apple Pay / Google Pay / Link enabled).
+  const pmc =
+    process.env.STRIPE_PAYMENT_METHOD_CONFIGURATION?.trim() ||
+    "pmc_1U5QAbDykLZnf3dgezfBabsS";
+  shared.payment_method_configuration = pmc;
 
   const modePayload =
     plan.billingType === PlanBillingType.ONE_TIME
