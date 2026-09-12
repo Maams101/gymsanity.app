@@ -46,7 +46,8 @@ export default async function SubscribePage({ searchParams }: { searchParams: Se
       <p className="mt-3 max-w-2xl text-sm leading-relaxed text-gymsanity-900/80">
         Buy a single 1:1 session for $180, or save with 6, 12, or 24 session packages. The 6-pack is
         $170 per session; 12- and 24-packs take $5 and $10 off that rate. After payment, credits land
-        in your account for booking. Pay with card, Apple Pay, or Link at checkout.
+        in your account for booking. Pay with card, Apple Pay, or Link at checkout. Existing clients
+        can enter a promo code at checkout for 20% off.
       </p>
 
       {!stripeOn ? (
