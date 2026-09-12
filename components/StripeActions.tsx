@@ -27,7 +27,11 @@ export function SubscribeCheckoutButton({
       setError(data.error ?? "Could not start checkout.");
       return;
     }
-    if (data.url) window.location.href = data.url as string;
+    if (data.url) {
+      window.location.href = data.url as string;
+      return;
+    }
+    setError("Checkout started but no Stripe URL was returned.");
   }
 
   return (

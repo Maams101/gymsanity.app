@@ -87,7 +87,6 @@ export async function POST(request: Request) {
     line_items: [{ price: plan.stripePriceId, quantity: 1 }],
     client_reference_id: user.id,
     metadata: { userId: user.id, planSlug: plan.slug },
-    automatic_payment_methods: { enabled: true },
     ...(user.stripeCustomerId
       ? { customer: user.stripeCustomerId }
       : { customer_email: user.email }),
@@ -102,17 +101,27 @@ export async function POST(request: Request) {
           subscription_data: { metadata: { userId: user.id, planSlug: plan.slug } },
         };
 
-  const checkout = embedded
-    ? await stripe.checkout.sessions.create({
-        ...modePayload,
-        ui_mode: "embedded",
-        return_url: `${origin}/post-checkout?session_id={CHECKOUT_SESSION_ID}`,
-      })
-    : await stripe.checkout.sessions.create({
-        ...modePayload,
-        success_url: `${origin}/post-checkout`,
-        cancel_url: `${origin}/subscribe?checkout=cancelled`,
-      });
+  let checkout;
+  try {
+    checkout = embedded
+      ? await stripe.checkout.sessions.create({
+          ...modePayload,
+          ui_mode: "embedded",
+          return_url: `${origin}/post-checkout?session_id={CHECKOUT_SESSION_ID}`,
+        })
+      : await stripe.checkout.sessions.create({
+          ...modePayload,
+          success_url: `${origin}/post-checkout`,
+          cancel_url: `${origin}/subscribe?checkout=cancelled`,
+        });
+  } catch (err) {
+    console.error("stripe checkout session create failed", err);
+    const message =
+      err instanceof Error && err.message
+        ? err.message
+        : "Could not start checkout with Stripe.";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
 
   if (embedded) {
     if (!checkout.client_secret) {

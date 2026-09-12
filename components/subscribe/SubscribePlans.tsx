@@ -60,7 +60,11 @@ export function SubscribePlans({
       return;
     }
     const url = (data as { url?: string }).url;
-    if (url) window.location.href = url;
+    if (url) {
+      window.location.href = url;
+      return;
+    }
+    setError("Checkout started but no Stripe URL was returned.");
   }, []);
 
   const packs = plans.filter((p) => p.billingType === "ONE_TIME");
@@ -214,53 +218,88 @@ function EmbeddedCheckoutModal({
       setPhase("loading");
       setLocalError(null);
 
-      const pk = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-      if (!pk) {
-        onFatalError("Stripe publishable key is not configured.");
-        return;
-      }
+      try {
+        const pk = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+        if (!pk) {
+          onFatalError("Stripe publishable key is not configured.");
+          return;
+        }
 
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planSlug, embedded: true }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const msg = (data as { error?: string }).error ?? "Could not start checkout.";
+        const res = await fetch("/api/stripe/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ planSlug, embedded: true }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const msg = (data as { error?: string }).error ?? "Could not start checkout.";
+          if (cancelled) return;
+          // Fall back to hosted Checkout if embedded session fails
+          const redirectRes = await fetch("/api/stripe/checkout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ planSlug }),
+          });
+          const redirectData = await redirectRes.json().catch(() => ({}));
+          const url = (redirectData as { url?: string }).url;
+          if (redirectRes.ok && url) {
+            window.location.href = url;
+            return;
+          }
+          setLocalError(msg);
+          setPhase("error");
+          return;
+        }
+
+        const clientSecret = (data as { clientSecret?: string }).clientSecret;
+        if (!clientSecret) {
+          if (!cancelled) {
+            setLocalError("Invalid checkout response.");
+            setPhase("error");
+          }
+          return;
+        }
+
+        const stripe = await loadStripe(pk);
+        if (cancelled || !stripe) {
+          if (!stripe && !cancelled) {
+            setLocalError("Could not load Stripe.");
+            setPhase("error");
+          }
+          return;
+        }
+
+        const checkout = await stripe.createEmbeddedCheckoutPage({ clientSecret });
+        if (cancelled) {
+          checkout.destroy();
+          return;
+        }
+
+        embedded = checkout;
+        checkout.mount(mountTarget);
+        setPhase("ready");
+      } catch (err) {
         if (cancelled) return;
-        setLocalError(msg);
+        console.error("embedded checkout failed", err);
+        // Hosted Checkout fallback
+        try {
+          const redirectRes = await fetch("/api/stripe/checkout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ planSlug }),
+          });
+          const redirectData = await redirectRes.json().catch(() => ({}));
+          const url = (redirectData as { url?: string }).url;
+          if (redirectRes.ok && url) {
+            window.location.href = url;
+            return;
+          }
+        } catch {
+          /* ignore */
+        }
+        setLocalError(err instanceof Error ? err.message : "Could not start checkout.");
         setPhase("error");
-        return;
       }
-
-      const clientSecret = (data as { clientSecret?: string }).clientSecret;
-      if (!clientSecret) {
-        if (!cancelled) {
-          setLocalError("Invalid checkout response.");
-          setPhase("error");
-        }
-        return;
-      }
-
-      const stripe = await loadStripe(pk);
-      if (cancelled || !stripe) {
-        if (!stripe && !cancelled) {
-          setLocalError("Could not load Stripe.");
-          setPhase("error");
-        }
-        return;
-      }
-
-      const checkout = await stripe.createEmbeddedCheckoutPage({ clientSecret });
-      if (cancelled) {
-        checkout.destroy();
-        return;
-      }
-
-      embedded = checkout;
-      checkout.mount(mountTarget);
-      setPhase("ready");
     }
 
     void run();
