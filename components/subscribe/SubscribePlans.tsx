@@ -85,7 +85,7 @@ export function SubscribePlans({
           <p className="mt-1 text-sm text-gymsanity-800/85">
             1:1 coaching packs. Larger packs lower the price per session.
           </p>
-          <ul className="mt-5 grid gap-5 md:grid-cols-3">
+          <ul className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {packs.map((p) => {
               const pack = sessionPackBySlug(p.slug);
               const perSession = pack
@@ -95,6 +95,7 @@ export function SubscribePlans({
               const savings = pack?.savingsPerSessionCents
                 ? formatUsdFromCents(pack.savingsPerSessionCents)
                 : null;
+              const isSingle = pack?.sessions === 1;
               return (
                 <li
                   key={p.id}
@@ -108,19 +109,22 @@ export function SubscribePlans({
                   ) : null}
                   {perSession ? (
                     <p className="mt-1 text-sm font-medium text-gymsanity-700">
-                      {perSession} per session
+                      {isSingle ? "Single 1:1 session" : `${perSession} per session`}
                     </p>
                   ) : null}
                   {savings ? (
                     <p className="mt-1 text-xs font-semibold text-green-800">
                       Save {savings} per session vs the 6-pack
                     </p>
+                  ) : isSingle ? (
+                    <p className="mt-1 text-xs text-gymsanity-600">Pay as you go</p>
                   ) : (
-                    <p className="mt-1 text-xs text-gymsanity-600">Base rate</p>
+                    <p className="mt-1 text-xs text-gymsanity-600">Base pack rate</p>
                   )}
                   <ul className="mt-4 flex-1 space-y-1 text-xs text-gymsanity-800/90">
                     <li>
-                      ✓ {p.oneOnOneCreditsPerMonth} × 60-minute 1-on-1 sessions after checkout
+                      ✓ {p.oneOnOneCreditsPerMonth} × 60-minute 1-on-1 session
+                      {p.oneOnOneCreditsPerMonth === 1 ? "" : "s"} after checkout
                     </li>
                     <li>✓ Book private slots with session credits</li>
                     <li>✓ Program library &amp; app access</li>

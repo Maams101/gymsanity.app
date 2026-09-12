@@ -129,6 +129,7 @@ export function RegisterForm() {
           {plans.length === 0 && (
             <>
               <option value="digital">Digital</option>
+              <option value="sessions-1">1 session</option>
               <option value="sessions-6">6 sessions</option>
               <option value="sessions-12">12 sessions</option>
               <option value="sessions-24">24 sessions</option>

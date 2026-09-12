@@ -63,6 +63,7 @@ DATABASE_URL="postgresql://YOUR_NEON_URL" npm run db:seed
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_test_...` or `pk_live_...` |
 | `STRIPE_WEBHOOK_SECRET` | From Stripe webhook (step 5) |
 | `STRIPE_PRICE_DIGITAL` | Recurring `price_...` |
+| `STRIPE_PRICE_SESSIONS_1` | One-time `price_...` ($160 single session) |
 | `STRIPE_PRICE_SESSIONS_6` | One-time `price_...` |
 | `STRIPE_PRICE_SESSIONS_12` | One-time `price_...` |
 | `STRIPE_PRICE_SESSIONS_24` | One-time `price_...` |

@@ -1,11 +1,19 @@
 export const SESSION_PACKS = [
   {
+    slug: "sessions-1",
+    name: "1 session",
+    sessions: 1,
+    pricePerSessionCents: 16000,
+    savingsPerSessionCents: 0,
+    sortOrder: 2,
+  },
+  {
     slug: "sessions-6",
     name: "6 sessions",
     sessions: 6,
     pricePerSessionCents: 17000,
     savingsPerSessionCents: 0,
-    sortOrder: 2,
+    sortOrder: 3,
   },
   {
     slug: "sessions-12",
@@ -13,7 +21,7 @@ export const SESSION_PACKS = [
     sessions: 12,
     pricePerSessionCents: 16500,
     savingsPerSessionCents: 500,
-    sortOrder: 3,
+    sortOrder: 4,
   },
   {
     slug: "sessions-24",
@@ -21,7 +29,7 @@ export const SESSION_PACKS = [
     sessions: 24,
     pricePerSessionCents: 16000,
     savingsPerSessionCents: 1000,
-    sortOrder: 4,
+    sortOrder: 5,
   },
 ] as const;
 

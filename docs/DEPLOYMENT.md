@@ -25,6 +25,7 @@ npx prisma db push
 3. Put them in environment variables (Vercel + local):
 
    - `STRIPE_PRICE_DIGITAL`
+   - `STRIPE_PRICE_SESSIONS_1`
    - `STRIPE_PRICE_SESSIONS_6`
    - `STRIPE_PRICE_SESSIONS_12`
    - `STRIPE_PRICE_SESSIONS_24`
@@ -71,7 +72,7 @@ Use the webhook signing secret the CLI prints as `STRIPE_WEBHOOK_SECRET` in `.en
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Publishable key (same mode as secret) |
 | `STRIPE_WEBHOOK_SECRET` | From Stripe webhook or `stripe listen` |
 | `STRIPE_PRICE_DIGITAL` | Recurring price for Digital (or set via DB) |
-| `STRIPE_PRICE_SESSIONS_6` / `_12` / `_24` | One-time session-pack prices (or set via DB) |
+| `STRIPE_PRICE_SESSIONS_1` / `_6` / `_12` / `_24` | One-time session prices (or set via DB) |
 
 `VERCEL_URL` is set automatically; `NEXT_PUBLIC_APP_URL` should still be your canonical URL for Stripe redirects.
 

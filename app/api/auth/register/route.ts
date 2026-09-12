@@ -11,7 +11,9 @@ const schema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(8),
-  planSlug: z.enum(["digital", "sessions-6", "sessions-12", "sessions-24"]).default("digital"),
+  planSlug: z
+    .enum(["digital", "sessions-1", "sessions-6", "sessions-12", "sessions-24"])
+    .default("digital"),
 });
 
 export async function POST(request: Request) {

@@ -19,6 +19,7 @@ export default async function SubscribePage({ searchParams }: { searchParams: Se
   const purchasable = offeredPlans.filter((p) => Boolean(p.stripePriceId));
   const priceEnvHint: Record<string, string> = {
     digital: "STRIPE_PRICE_DIGITAL",
+    "sessions-1": "STRIPE_PRICE_SESSIONS_1",
     "sessions-6": "STRIPE_PRICE_SESSIONS_6",
     "sessions-12": "STRIPE_PRICE_SESSIONS_12",
     "sessions-24": "STRIPE_PRICE_SESSIONS_24",
@@ -43,9 +44,9 @@ export default async function SubscribePage({ searchParams }: { searchParams: Se
         Choose a session pack
       </h1>
       <p className="mt-3 max-w-2xl text-sm leading-relaxed text-gymsanity-900/80">
-        1:1 coaching is sold in 6, 12, or 24 session packages. The 6-pack is $170 per session; 12-
-        and 24-packs take $5 and $10 off that rate. After payment, credits land in your account for
-        booking. Pay with card, Apple Pay, or Link at checkout.
+        Buy a single 1:1 session for $160, or save with 6, 12, or 24 session packages. The 6-pack is
+        $170 per session; 12- and 24-packs take $5 and $10 off that rate. After payment, credits land
+        in your account for booking. Pay with card, Apple Pay, or Link at checkout.
       </p>
 
       {!stripeOn ? (
