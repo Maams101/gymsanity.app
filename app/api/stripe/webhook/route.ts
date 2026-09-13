@@ -37,8 +37,7 @@ export async function POST(request: Request) {
         const userId = session.metadata?.userId ?? session.client_reference_id;
         if (!userId) break;
         const customerId =
-          typeof session.customer === "string" ? session.customer : session.customer?.id;
-        if (!customerId) break;
+          typeof session.customer === "string" ? session.customer : session.customer?.id ?? null;
 
         if (session.mode === "subscription") {
           if (!session.subscription) break;
@@ -48,6 +47,7 @@ export async function POST(request: Request) {
               : session.subscription.id;
           await activateMembershipAfterCheckout(userId, subId, customerId);
         } else if (session.mode === "payment") {
+          // customer may be null when Checkout used customer_email without customer_creation
           await activateMembershipAfterOneTimePayment(
             userId,
             customerId,

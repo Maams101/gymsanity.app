@@ -99,11 +99,15 @@ export async function POST(request: Request) {
     "pmc_1U5QAbDykLZnf3dgezfBabsS";
   shared.payment_method_configuration = pmc;
 
-  const modePayload =
+  const modePayload: Record<string, unknown> =
     plan.billingType === PlanBillingType.ONE_TIME
-      ? { mode: "payment" as const, ...shared }
+      ? {
+          mode: "payment",
+          ...shared,
+          ...(!user.stripeCustomerId ? { customer_creation: "always" } : {}),
+        }
       : {
-          mode: "subscription" as const,
+          mode: "subscription",
           ...shared,
           subscription_data: { metadata: { userId: user.id, planSlug: plan.slug } },
         };
@@ -118,7 +122,7 @@ export async function POST(request: Request) {
         })
       : await stripe.checkout.sessions.create({
           ...modePayload,
-          success_url: `${origin}/post-checkout`,
+          success_url: `${origin}/post-checkout?session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${origin}/subscribe?checkout=cancelled`,
         });
   } catch (err) {

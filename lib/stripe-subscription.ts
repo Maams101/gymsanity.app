@@ -1,5 +1,7 @@
-import { PlanBillingType } from "@prisma/client";
+import { PlanBillingType, type Membership, type Plan } from "@prisma/client";
 import { prisma } from "@/lib/db";
+
+type MembershipWithPlan = Membership & { plan: Plan };
 
 /**
  * Called from Stripe webhook after Checkout completes in payment mode (coaching packs).
@@ -7,7 +9,7 @@ import { prisma } from "@/lib/db";
  */
 export async function activateMembershipAfterOneTimePayment(
   userId: string,
-  stripeCustomerId: string,
+  stripeCustomerId: string | null | undefined,
   checkoutSessionId: string,
   planSlug?: string | null
 ) {
@@ -17,35 +19,42 @@ export async function activateMembershipAfterOneTimePayment(
     });
     if (dup) return;
 
-    let membership = await tx.membership.findFirst({
-      where: { userId, active: false },
-      orderBy: { startedAt: "desc" },
-      include: { plan: true },
-    });
+    // Prefer the plan purchased in this Checkout (metadata), not a stale pending membership.
+    let membership: MembershipWithPlan | null = null;
 
-    if (
-      (!membership || membership.plan.billingType !== PlanBillingType.ONE_TIME) &&
-      planSlug
-    ) {
+    if (planSlug) {
       const plan = await tx.plan.findUnique({ where: { slug: planSlug } });
       if (plan?.billingType === PlanBillingType.ONE_TIME) {
-        membership = await tx.membership.create({
-          data: {
-            userId,
-            planId: plan.id,
-            active: false,
-          },
+        const pendingForPlan = await tx.membership.findFirst({
+          where: { userId, planId: plan.id, active: false },
+          orderBy: { startedAt: "desc" },
           include: { plan: true },
         });
+        membership =
+          pendingForPlan ??
+          (await tx.membership.create({
+            data: { userId, planId: plan.id, active: false },
+            include: { plan: true },
+          }));
       }
+    }
+
+    if (!membership) {
+      membership = await tx.membership.findFirst({
+        where: { userId, active: false },
+        orderBy: { startedAt: "desc" },
+        include: { plan: true },
+      });
     }
 
     if (!membership || membership.plan.billingType !== PlanBillingType.ONE_TIME) return;
 
-    await tx.user.update({
-      where: { id: userId },
-      data: { stripeCustomerId },
-    });
+    if (stripeCustomerId) {
+      await tx.user.update({
+        where: { id: userId },
+        data: { stripeCustomerId },
+      });
+    }
 
     await tx.membership.update({
       where: { id: membership.id },
@@ -82,7 +91,7 @@ export async function activateMembershipAfterOneTimePayment(
 export async function activateMembershipAfterCheckout(
   userId: string,
   stripeSubscriptionId: string,
-  stripeCustomerId: string
+  stripeCustomerId: string | null | undefined
 ) {
   await prisma.$transaction(async (tx) => {
     const alreadyActive = await tx.membership.findFirst({
@@ -97,10 +106,12 @@ export async function activateMembershipAfterCheckout(
     });
     if (!membership || membership.plan.billingType !== PlanBillingType.SUBSCRIPTION) return;
 
-    await tx.user.update({
-      where: { id: userId },
-      data: { stripeCustomerId },
-    });
+    if (stripeCustomerId) {
+      await tx.user.update({
+        where: { id: userId },
+        data: { stripeCustomerId },
+      });
+    }
 
     await tx.membership.update({
       where: { id: membership.id },

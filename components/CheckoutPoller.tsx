@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const INTERVAL_MS = 1800;
@@ -8,6 +8,8 @@ const MAX_ATTEMPTS = 50;
 
 export function CheckoutPoller() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get("session_id");
   const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
@@ -15,28 +17,49 @@ export function CheckoutPoller() {
     let n = 0;
 
     async function tick() {
+      // Prefer confirming the Checkout session directly (covers missed webhooks).
+      if (sessionId) {
+        const confirmRes = await fetch("/api/stripe/confirm-checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId }),
+        });
+        if (!cancelled && confirmRes.ok) {
+          const confirmData = await confirmRes.json().catch(() => ({}));
+          if (confirmData.ready) {
+            router.push("/today?checkout=success");
+            router.refresh();
+            return;
+          }
+        }
+      }
+
       const res = await fetch("/api/me");
       if (cancelled) return;
-      if (!res.ok) return;
-      const data = await res.json().catch(() => ({}));
-      if (data.membership) {
-        router.push("/today?checkout=success");
-        router.refresh();
-        return;
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.membership) {
+          router.push("/today?checkout=success");
+          router.refresh();
+          return;
+        }
       }
+
       n += 1;
       if (n >= MAX_ATTEMPTS) {
         setTimedOut(true);
         return;
       }
-      setTimeout(tick, INTERVAL_MS);
+      setTimeout(() => {
+        void tick();
+      }, INTERVAL_MS);
     }
 
     void tick();
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, sessionId]);
 
   return (
     <div className="mx-auto mt-16 max-w-md rounded-2xl border border-gymsanity-100 bg-white/90 p-8 text-center shadow-sm">
@@ -57,8 +80,8 @@ export function CheckoutPoller() {
             Refresh
           </button>
           <p>
-            <a href="/subscribe" className="font-semibold text-gymsanity-800 underline">
-              Back to plans
+            <a href="/today" className="font-semibold text-gymsanity-800 underline">
+              Go to dashboard
             </a>
           </p>
         </div>
