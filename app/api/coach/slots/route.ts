@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { SlotType } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { GROUP_SESSIONS_ENABLED } from "@/lib/group-sessions";
 import { requireCoach } from "@/lib/require-coach";
 
 const schema = z.object({
@@ -21,6 +22,13 @@ export async function POST(request: Request) {
   const parsed = schema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid slot data." }, { status: 400 });
+  }
+
+  if (parsed.data.type === SlotType.GROUP && !GROUP_SESSIONS_ENABLED) {
+    return NextResponse.json(
+      { error: "Group sessions are temporarily unavailable." },
+      { status: 403 },
+    );
   }
 
   const startAt = new Date(parsed.data.startAt);

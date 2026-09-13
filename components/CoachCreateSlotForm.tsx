@@ -2,12 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { GROUP_SESSIONS_ENABLED } from "@/lib/group-sessions";
 
 export function CoachCreateSlotForm() {
   const router = useRouter();
   const [startAt, setStartAt] = useState("");
   const [endAt, setEndAt] = useState("");
-  const [type, setType] = useState<"GROUP" | "ONE_ON_ONE">("GROUP");
+  const [type, setType] = useState<"GROUP" | "ONE_ON_ONE">(
+    GROUP_SESSIONS_ENABLED ? "GROUP" : "ONE_ON_ONE",
+  );
   const [capacity, setCapacity] = useState(12);
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("Gymsanity Studio · NYC");
@@ -51,6 +54,11 @@ export function CoachCreateSlotForm() {
       className="space-y-4 rounded-2xl border border-gymsanity-100 bg-white/90 p-6 shadow-sm"
     >
       <h2 className="font-display text-lg font-semibold text-gymsanity-950">Add availability</h2>
+      {!GROUP_SESSIONS_ENABLED && (
+        <p className="rounded-xl border border-amber-200 bg-amber-50/90 px-3 py-2 text-xs text-amber-950">
+          Group sessions are temporarily suspended — new slots are 1:1 only.
+        </p>
+      )}
       {error && <p className="text-sm text-red-700">{error}</p>}
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block text-sm font-medium text-gymsanity-900">
@@ -81,11 +89,11 @@ export function CoachCreateSlotForm() {
           onChange={(e) => setType(e.target.value as "GROUP" | "ONE_ON_ONE")}
           className="mt-1 w-full rounded-xl border border-gymsanity-200 bg-white px-3 py-2 text-gymsanity-950"
         >
-          <option value="GROUP">Group</option>
+          {GROUP_SESSIONS_ENABLED ? <option value="GROUP">Group</option> : null}
           <option value="ONE_ON_ONE">1:1</option>
         </select>
       </label>
-      {type === "GROUP" && (
+      {GROUP_SESSIONS_ENABLED && type === "GROUP" && (
         <label className="block text-sm font-medium text-gymsanity-900">
           Capacity
           <input

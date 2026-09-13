@@ -1,5 +1,6 @@
 import { BookingStatus, SlotType } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { GROUP_SESSIONS_ENABLED } from "@/lib/group-sessions";
 import { getActiveMembership, getCreditBalance } from "@/lib/membership";
 
 export async function bookSlot(userId: string, slotId: string) {
@@ -25,6 +26,9 @@ export async function bookSlot(userId: string, slotId: string) {
   if (existing) return { ok: false as const, error: "You already booked this slot." };
 
   if (slot.type === SlotType.GROUP) {
+    if (!GROUP_SESSIONS_ENABLED) {
+      return { ok: false as const, error: "Group sessions are temporarily unavailable." };
+    }
     if (!plan.allowsGroupBooking) {
       return { ok: false as const, error: "Your plan does not include group sessions." };
     }
