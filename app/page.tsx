@@ -44,8 +44,7 @@ export default function HomePage() {
             </h1>
             <p className="text-base leading-relaxed text-pretty text-gymsanity-900/80 sm:text-lg">
               Gymsanity was built from the belief that fitness is mental, emotional, and spiritual
-              balance. Programs, group sessions, and 1:1 coaching—structured around consistency and
-              recovery.
+              balance. Programs and 1:1 coaching—structured around consistency and recovery.
             </p>
             <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:flex-wrap sm:pt-2">
               <Link
@@ -72,12 +71,12 @@ export default function HomePage() {
                 body: "Structured weeks with breath, strength, and recovery—clear prescriptions, no guesswork.",
               },
               {
-                title: "Group sessions",
-                body: "Train in community with slots that respect capacity and your pace.",
-              },
-              {
                 title: "1:1 coaching",
                 body: "Credits unlock private time—deeper accountability when you need it most.",
+              },
+              {
+                title: "Progress you can see",
+                body: "Log loads, complete sessions, and keep your training rhythm visible day to day.",
               },
             ].map((c) => (
               <div

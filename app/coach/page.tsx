@@ -3,6 +3,7 @@ import { BookingStatus } from "@prisma/client";
 import { appBaseUrl } from "@/lib/app-url";
 import { prisma } from "@/lib/db";
 import { FOCUS_GROUP_JOIN_PATH, getFocusGroupFeedbackCount } from "@/lib/focus-group";
+import { GROUP_SESSIONS_ENABLED } from "@/lib/group-sessions";
 import { CoachCreateSlotForm } from "@/components/CoachCreateSlotForm";
 import { CoachBookingActions } from "@/components/CoachBookingActions";
 import { CoachWorkoutOfDayForm } from "@/components/coach/CoachWorkoutOfDayForm";
@@ -14,7 +15,7 @@ export default async function CoachPage() {
   const todayKey = localDateKey(now);
   const todayWod = await getCoachWorkoutOfDayForEdit(todayKey);
 
-  const [bookings, feedbackCount] = await Promise.all([
+  const [bookingsRaw, feedbackCount] = await Promise.all([
     prisma.booking.findMany({
       where: {
         status: BookingStatus.BOOKED,
@@ -28,6 +29,9 @@ export default async function CoachPage() {
     }),
     getFocusGroupFeedbackCount(),
   ]);
+  const bookings = GROUP_SESSIONS_ENABLED
+    ? bookingsRaw
+    : bookingsRaw.filter((b) => b.slot.type !== "GROUP");
 
   return (
     <div className="space-y-10">
@@ -126,7 +130,7 @@ export default async function CoachPage() {
                     <span className="font-normal text-gymsanity-800/80">({b.user.email})</span>
                   </p>
                   <p className="text-sm text-gymsanity-900/75">
-                    {b.slot.title ?? (b.slot.type === "GROUP" ? "Group class" : "1:1 coaching")} ·{" "}
+                    {b.slot.title ?? "1:1 coaching"} ·{" "}
                     {new Date(b.slot.startAt).toLocaleString(undefined, {
                       weekday: "short",
                       month: "short",
@@ -136,7 +140,7 @@ export default async function CoachPage() {
                     })}
                   </p>
                   <p className="text-xs text-gymsanity-800/70">
-                    {b.slot.type === "GROUP" ? "Group" : "1:1"} · {b.slot.location ?? "Location TBD"}
+                    {b.slot.location ?? "Location TBD"}
                   </p>
                 </div>
                 <CoachBookingActions bookingId={b.id} />

@@ -27,10 +27,10 @@ export async function bookSlot(userId: string, slotId: string) {
 
   if (slot.type === SlotType.GROUP) {
     if (!GROUP_SESSIONS_ENABLED) {
-      return { ok: false as const, error: "Group sessions are temporarily unavailable." };
+      return { ok: false as const, error: "This session type is not available." };
     }
     if (!plan.allowsGroupBooking) {
-      return { ok: false as const, error: "Your plan does not include group sessions." };
+      return { ok: false as const, error: "This session type is not available." };
     }
     const count = slot.bookings.length;
     if (count >= slot.capacity) {

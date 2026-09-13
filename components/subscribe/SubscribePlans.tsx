@@ -166,11 +166,9 @@ export function SubscribePlans({
                 </p>
                 <ul className="mt-4 space-y-1 text-xs text-gymsanity-800/90">
                   <li>{p.includesDigitalPrograms ? "✓ Digital programming" : "— No digital library"}</li>
-                  <li>
-                    {GROUP_SESSIONS_ENABLED && p.allowsGroupBooking
-                      ? "✓ Group sessions"
-                      : "— Group sessions temporarily unavailable"}
-                  </li>
+                  {GROUP_SESSIONS_ENABLED ? (
+                    <li>{p.allowsGroupBooking ? "✓ Group sessions" : "— No group booking"}</li>
+                  ) : null}
                   <li>— 1:1 sessions sold separately as packs</li>
                 </ul>
                 <button

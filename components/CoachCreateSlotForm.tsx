@@ -24,14 +24,15 @@ export function CoachCreateSlotForm() {
     setError(null);
     const start = new Date(startAt);
     const end = new Date(endAt);
+    const slotType = GROUP_SESSIONS_ENABLED ? type : "ONE_ON_ONE";
     const res = await fetch("/api/coach/slots", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         startAt: start.toISOString(),
         endAt: end.toISOString(),
-        type,
-        capacity: type === "GROUP" ? capacity : 1,
+        type: slotType,
+        capacity: slotType === "GROUP" ? capacity : 1,
         title: title || undefined,
         location: location || undefined,
       }),
@@ -54,11 +55,6 @@ export function CoachCreateSlotForm() {
       className="space-y-4 rounded-2xl border border-gymsanity-100 bg-white/90 p-6 shadow-sm"
     >
       <h2 className="font-display text-lg font-semibold text-gymsanity-950">Add availability</h2>
-      {!GROUP_SESSIONS_ENABLED && (
-        <p className="rounded-xl border border-amber-200 bg-amber-50/90 px-3 py-2 text-xs text-amber-950">
-          Group sessions are temporarily suspended — new slots are 1:1 only.
-        </p>
-      )}
       {error && <p className="text-sm text-red-700">{error}</p>}
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block text-sm font-medium text-gymsanity-900">
@@ -82,29 +78,35 @@ export function CoachCreateSlotForm() {
           />
         </label>
       </div>
-      <label className="block text-sm font-medium text-gymsanity-900">
-        Type
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value as "GROUP" | "ONE_ON_ONE")}
-          className="mt-1 w-full rounded-xl border border-gymsanity-200 bg-white px-3 py-2 text-gymsanity-950"
-        >
-          {GROUP_SESSIONS_ENABLED ? <option value="GROUP">Group</option> : null}
-          <option value="ONE_ON_ONE">1:1</option>
-        </select>
-      </label>
-      {GROUP_SESSIONS_ENABLED && type === "GROUP" && (
-        <label className="block text-sm font-medium text-gymsanity-900">
-          Capacity
-          <input
-            type="number"
-            min={1}
-            max={50}
-            value={capacity}
-            onChange={(e) => setCapacity(Number(e.target.value))}
-            className="mt-1 w-full rounded-xl border border-gymsanity-200 px-3 py-2 text-gymsanity-950"
-          />
-        </label>
+      {GROUP_SESSIONS_ENABLED ? (
+        <>
+          <label className="block text-sm font-medium text-gymsanity-900">
+            Type
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value as "GROUP" | "ONE_ON_ONE")}
+              className="mt-1 w-full rounded-xl border border-gymsanity-200 bg-white px-3 py-2 text-gymsanity-950"
+            >
+              <option value="GROUP">Group</option>
+              <option value="ONE_ON_ONE">1:1</option>
+            </select>
+          </label>
+          {type === "GROUP" && (
+            <label className="block text-sm font-medium text-gymsanity-900">
+              Capacity
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={capacity}
+                onChange={(e) => setCapacity(Number(e.target.value))}
+                className="mt-1 w-full rounded-xl border border-gymsanity-200 px-3 py-2 text-gymsanity-950"
+              />
+            </label>
+          )}
+        </>
+      ) : (
+        <p className="text-sm text-gymsanity-800/85">Publishes a private 1:1 coaching slot.</p>
       )}
       <label className="block text-sm font-medium text-gymsanity-900">
         Title (optional)
@@ -112,7 +114,7 @@ export function CoachCreateSlotForm() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           className="mt-1 w-full rounded-xl border border-gymsanity-200 px-3 py-2 text-gymsanity-950"
-          placeholder="Morning sanity circuit"
+          placeholder="Private coaching"
         />
       </label>
       <label className="block text-sm font-medium text-gymsanity-900">

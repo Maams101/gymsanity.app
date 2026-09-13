@@ -346,7 +346,7 @@ export function MemberNavDropdowns({ preview }: Props) {
               Book sessions
             </p>
             <p className="mt-2 text-sm text-gymsanity-800/85">
-              Reserve group classes or use a 1:1 credit for private coaching.
+              Use a 1:1 credit for private coaching.
             </p>
             <p className="mt-3 rounded-xl border border-gymsanity-100 bg-gymsanity-50/80 p-3 text-sm">
               <span className="text-gymsanity-700">1:1 credits available:</span>{" "}

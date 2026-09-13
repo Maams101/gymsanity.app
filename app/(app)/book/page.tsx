@@ -18,9 +18,7 @@ export default async function BookPage() {
       <div>
         <h1 className="font-display text-3xl font-semibold text-gymsanity-950">Book sessions</h1>
         <p className="mt-2 max-w-xl text-gymsanity-900/75">
-          {GROUP_SESSIONS_ENABLED
-            ? "Reserve a group class or use a 1:1 credit for private coaching. Credits apply when you confirm a private slot."
-            : "Use a 1:1 credit for private coaching. Credits apply when you confirm a private slot. Group classes are temporarily unavailable."}
+          Use a 1:1 credit for private coaching. Credits apply when you confirm a private slot.
         </p>
       </div>
 

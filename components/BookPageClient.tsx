@@ -114,7 +114,7 @@ export function BookPageClient({
               >
                 <div>
                   <p className="font-medium text-gymsanity-950">
-                    {s.title ?? (s.type === "GROUP" ? "Group class" : "1:1 coaching")}
+                    {s.title ?? "1:1 coaching"}
                   </p>
                   <p className="text-sm text-gymsanity-900/75">
                     {new Date(s.startAt).toLocaleString(undefined, {
@@ -131,8 +131,7 @@ export function BookPageClient({
                     })}
                   </p>
                   <p className="text-xs text-gymsanity-800/70">
-                    {s.location ?? "Location TBD"} · {s.type === "GROUP" ? "Group" : "1:1"} ·{" "}
-                    {s.type === "GROUP" ? `${s.bookedCount}/${s.capacity} spots` : "Private"}
+                    {s.location ?? "Location TBD"} · Private
                   </p>
                 </div>
                 <div className="flex gap-2">

@@ -86,13 +86,14 @@ async function main() {
     prisma.plan.upsert({
       where: { slug: "digital" },
       update: {
+        description: "Full programming library and app access.",
         stripePriceId: process.env.STRIPE_PRICE_DIGITAL || undefined,
         billingType: PlanBillingType.SUBSCRIPTION,
       },
       create: {
         slug: "digital",
         name: "Digital",
-        description: "Full programming library + group sessions.",
+        description: "Full programming library and app access.",
         includesDigitalPrograms: true,
         allowsGroupBooking: true,
         allowsOneOnOneBooking: false,

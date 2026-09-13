@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { dailyMacroTargetsFromProfile, type DailyMacroTargets } from "@/lib/day-macro-targets";
+import { GROUP_SESSIONS_ENABLED } from "@/lib/group-sessions";
 import {
   formatLocalDateLong,
   localDateKey,
@@ -154,10 +155,11 @@ export async function getDayAtAGlance(userId: string, at = new Date()): Promise<
   }
 
   for (const b of bookings) {
+    if (!GROUP_SESSIONS_ENABLED && b.slot.type === "GROUP") continue;
     training.push({
       kind: "booking",
       id: b.id,
-      title: b.slot.title ?? (b.slot.type === "GROUP" ? "Group class" : "1:1 coaching"),
+      title: b.slot.title ?? "1:1 coaching",
       subtitle: b.slot.location ?? "Location TBD",
       href: "/book",
       timeLabel: new Date(b.slot.startAt).toLocaleTimeString(undefined, {

@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
   if (parsed.data.type === SlotType.GROUP && !GROUP_SESSIONS_ENABLED) {
     return NextResponse.json(
-      { error: "Group sessions are temporarily unavailable." },
+      { error: "This session type is not available." },
       { status: 403 },
     );
   }
