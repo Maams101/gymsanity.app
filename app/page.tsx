@@ -43,8 +43,9 @@ export default function HomePage() {
               Train for <span className="text-gymsanity-700">sanity</span>
             </h1>
             <p className="text-base leading-relaxed text-pretty text-gymsanity-900/80 sm:text-lg">
-              Gymsanity was built from the belief that fitness is mental, emotional, and spiritual
-              balance. Programs and 1:1 coaching—structured around consistency and recovery.
+              Gymsanity was built from the belief that fitness is the first step to achieving mental,
+              emotional, and spiritual balance. Programs and 1:1 coaching—structured around
+              consistency and recovery.
             </p>
             <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:flex-wrap sm:pt-2">
               <Link
